@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { startSession, endSession } from "./session-actions";
+import QrDisplay from "./qr-display";
 
 type Attendee = {
   full_name: string;
@@ -16,6 +17,8 @@ export default function SessionPanel({
   sessionId,
   isOpen,
   roomCode,
+  roomName,
+  qrDataUrl,
   attendees,
   enrolledCount,
 }: {
@@ -23,13 +26,15 @@ export default function SessionPanel({
   sessionId: string | null;
   isOpen: boolean;
   roomCode: string | null;
+  roomName: string | null;
+  qrDataUrl: string | null;
   attendees: Attendee[];
   enrolledCount: number;
 }) {
   const router = useRouter();
 
-  // While the class is open, pull in new scans so the teacher sees students
-  // appear as they arrive.
+  // While the class is open, pull in new scans so students appear as they
+  // arrive.
   useEffect(() => {
     if (!isOpen) return;
     const timer = setInterval(() => router.refresh(), 8000);
@@ -68,16 +73,14 @@ export default function SessionPanel({
           </p>
           <p className="mt-1 text-sm text-[#5A6B7A]">
             {isOpen
-              ? "Students can scan the code on the door now."
+              ? "Students can scan the code now."
               : "Scans are rejected until you open the class."}
           </p>
         </div>
 
         <form action={isOpen ? endSession : startSession}>
           <input type="hidden" name="sectionId" value={sectionId} />
-          {sessionId && (
-            <input type="hidden" name="sessionId" value={sessionId} />
-          )}
+          {sessionId && <input type="hidden" name="sessionId" value={sessionId} />}
           <button
             type="submit"
             className="rounded py-3 px-6 text-sm tracking-wide text-white transition-colors"
@@ -87,6 +90,14 @@ export default function SessionPanel({
           </button>
         </form>
       </div>
+
+      {isOpen && qrDataUrl && (
+        <QrDisplay
+          dataUrl={qrDataUrl}
+          roomCode={roomCode}
+          roomName={roomName ?? roomCode}
+        />
+      )}
 
       {isOpen && (
         <div className="mt-6 pt-6 border-t border-[#D3E3DE]">
@@ -98,7 +109,10 @@ export default function SessionPanel({
               </p>
             </div>
             <div>
-              <p className="font-mono text-3xl leading-none" style={{ color: late > 0 ? "#A8321F" : undefined }}>
+              <p
+                className="font-mono text-3xl leading-none"
+                style={{ color: late > 0 ? "#A8321F" : undefined }}
+              >
                 {late}
               </p>
               <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-[#5A6B7A]">

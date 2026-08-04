@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
+import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceClient } from "@/lib/supabase/admin";
 import { requireTeacher } from "@/lib/require-teacher";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
 import { DAY_NAMES } from "@/app/admin/sections/days";
+import { makeStaticToken, tokenUrl } from "@/lib/qr-token";
 import EnrolForm from "./form";
 import SessionPanel from "./session-panel";
 import { removeStudent } from "./actions";
@@ -32,7 +34,7 @@ export default async function SectionPage({
 
   const { data: section } = await supabase
     .from("sections")
-    .select("id, name, day_of_week, start_time, end_time, teacher_id, grace_minutes, subjects(code, title), rooms(code, name)")
+    .select("id, name, day_of_week, start_time, end_time, teacher_id, grace_minutes, default_room_id, subjects(code, title), rooms(code, name)")
     .eq("id", id)
     .maybeSingle();
 
@@ -43,14 +45,40 @@ export default async function SectionPage({
   });
   const roster = (rosterData ?? []) as RosterRow[];
 
-  // Today's session, if any.
   const service = getServiceClient();
+
   const { data: session } = await service
     .from("class_sessions")
     .select("id, status")
     .eq("section_id", id)
     .eq("session_date", manilaToday())
     .maybeSingle();
+
+  const isOpen = session?.status === "open";
+
+  // The signing secret is read here, on the server, and used to mint the code.
+  // Only the resulting image reaches the browser.
+  let qrDataUrl: string | null = null;
+  const roomId = (section as any).default_room_id as string | null;
+
+  if (isOpen && roomId) {
+    const { data: room } = await service
+      .from("rooms")
+      .select("id, qr_secret")
+      .eq("id", roomId)
+      .maybeSingle();
+
+    if (room) {
+      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+      const token = makeStaticToken(room.id as string, room.qr_secret as string);
+      qrDataUrl = await QRCode.toDataURL(tokenUrl(origin, token), {
+        errorCorrectionLevel: "H",
+        margin: 2,
+        width: 700,
+        color: { dark: "#16202B", light: "#FFFFFF" },
+      });
+    }
+  }
 
   let attendees: any[] = [];
   if (session) {
@@ -84,8 +112,10 @@ export default async function SectionPage({
         <SessionPanel
           sectionId={id}
           sessionId={(session?.id as string) ?? null}
-          isOpen={session?.status === "open"}
+          isOpen={isOpen}
           roomCode={s.rooms?.code ?? null}
+          roomName={s.rooms?.name ?? null}
+          qrDataUrl={qrDataUrl}
           attendees={attendees}
           enrolledCount={roster.length}
         />
