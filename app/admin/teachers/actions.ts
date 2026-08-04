@@ -8,8 +8,10 @@ import { normalizeFacultyId, isValidFacultyId } from "@/lib/auth";
 
 export type TeacherState = {
   error: string | null;
-  created: { name: string; email: string; tempPassword: string } | null;
+  created: { name: string; email: string; password: string } | null;
 };
+
+const MIN_PASSWORD = 8;
 
 export async function createTeacher(
   _prev: TeacherState,
@@ -23,6 +25,10 @@ export async function createTeacher(
   const email = str(formData, "email").toLowerCase();
   const contactNo = str(formData, "contactNo");
 
+  // Admin may set the password, or leave it blank for a generated one.
+  const chosen = String(formData.get("password") ?? "");
+  const password = chosen || randomBytes(9).toString("base64url");
+
   if (!fullName || !facultyId || !department || !email) {
     return fail("Fill in name, faculty ID, department and email.");
   }
@@ -32,17 +38,16 @@ export async function createTeacher(
   if (!email.includes("@") || email.endsWith("@students.invalid")) {
     return fail("Use a real email address the teacher can receive mail at.");
   }
-
-  // Shown to the admin once, then never retrievable. The teacher changes it on
-  // first sign-in.
-  const tempPassword = randomBytes(9).toString("base64url");
+  if (chosen && chosen.length < MIN_PASSWORD) {
+    return fail(`A password you set must be at least ${MIN_PASSWORD} characters.`);
+  }
 
   const supabase = getServiceClient();
 
   const { data: created, error: createErr } =
     await supabase.auth.admin.createUser({
       email,
-      password: tempPassword,
+      password,
       email_confirm: true,
     });
 
@@ -52,9 +57,13 @@ export async function createTeacher(
 
   const userId = created.user.id;
 
-  const { error: profileErr } = await supabase
-    .from("profiles")
-    .insert({ id: userId, role: "teacher", full_name: fullName });
+  const { error: profileErr } = await supabase.from("profiles").insert({
+    id: userId,
+    role: "teacher",
+    full_name: fullName,
+    // Flagged until they choose their own. The app prompts them at sign-in.
+    must_change_password: true,
+  });
 
   if (profileErr) {
     await supabase.auth.admin.deleteUser(userId);
@@ -73,7 +82,7 @@ export async function createTeacher(
     return fail(
       staffErr.code === "23505"
         ? `Faculty ID ${facultyId} is already registered.`
-        : "Couldn't save the teacher's details. Try again.",
+        : `Couldn't save the teacher's details (${staffErr.message}).`,
     );
   }
 
@@ -81,11 +90,34 @@ export async function createTeacher(
     actor_id: admin.id,
     action: "teacher_created",
     target: userId,
-    detail: { faculty_id: facultyId, department },
+    detail: { faculty_id: facultyId, department, password_set_by_admin: Boolean(chosen) },
   });
 
   revalidatePath("/admin/teachers");
-  return { error: null, created: { name: fullName, email, tempPassword } };
+  revalidatePath("/admin/users");
+  return { error: null, created: { name: fullName, email, password } };
+}
+
+/** Issues a new temporary password. Used when someone is locked out. */
+export async function resetPassword(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const userId = String(formData.get("userId"));
+  const newPassword = randomBytes(9).toString("base64url");
+
+  const supabase = getServiceClient();
+  await supabase.auth.admin.updateUserById(userId, { password: newPassword });
+  await supabase
+    .from("profiles")
+    .update({ must_change_password: true })
+    .eq("id", userId);
+
+  await supabase.from("audit_log").insert({
+    actor_id: admin.id,
+    action: "password_reset",
+    target: userId,
+  });
+
+  revalidatePath("/admin/users");
 }
 
 function fail(error: string): TeacherState {

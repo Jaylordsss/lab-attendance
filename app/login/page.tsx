@@ -10,7 +10,6 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-dvh flex items-center justify-center p-6 bg-[#FBFAF7] text-[#16202B]">
-      {/* Engineering-paper grid. Decorative only. */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 opacity-70"
@@ -26,9 +25,7 @@ export default function LoginPage() {
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
             General Science Laboratory
           </p>
-          <h1 className="mt-1 text-2xl font-medium leading-tight">
-            Attendance
-          </h1>
+          <h1 className="mt-1 text-2xl font-medium leading-tight">Attendance</h1>
         </header>
 
         <form
@@ -40,7 +37,7 @@ export default function LoginPage() {
               htmlFor="identifier"
               className="block text-[11px] uppercase tracking-[0.14em] text-[#5A6B7A] mb-2"
             >
-              Student number
+              ID number
             </label>
             <input
               id="identifier"
@@ -53,8 +50,9 @@ export default function LoginPage() {
               placeholder="2024-00123"
               className="w-full font-mono text-lg tracking-[0.08em] border-b-2 border-[#16202B] bg-transparent pb-1.5 outline-none placeholder:text-[#B4BFC8] placeholder:tracking-normal focus:border-[#0B6E5F]"
             />
-            <p className="mt-2 text-xs text-[#5A6B7A]">
-              Teachers and admins: use your email address.
+            <p className="mt-2 text-xs text-[#5A6B7A] leading-relaxed">
+              Students use their student number, teachers and admins their
+              faculty ID. An email address works too.
             </p>
           </div>
 
@@ -94,8 +92,8 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-5 text-xs text-[#5A6B7A] leading-relaxed">
-          Forgot your password? Ask your teacher to reset it — student accounts
-          have no email inbox.
+          Forgot your password? Students ask their teacher; teachers ask the
+          administrator.
         </p>
       </div>
     </main>
