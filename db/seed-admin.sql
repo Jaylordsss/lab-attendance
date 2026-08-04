@@ -15,9 +15,9 @@
 
 insert into profiles (id, role, full_name)
 values (
-  'PASTE-THE-UUID-HERE',
-  'admin',
-  'Your Name'
+  'f544b10f-ead5-4293-8a21-9a2ee5ef2a1d',
+  'Laboratory Custodian',
+  'Christian Henrich Garin'
 );
 
 -- Verify:

@@ -1,0 +1,59 @@
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { PageHeader, Empty } from "@/components/admin-ui";
+import { DAY_NAMES } from "@/app/admin/sections/days";
+
+export const dynamic = "force-dynamic";
+
+export default async function TeacherHome() {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("sections")
+    .select("id, name, day_of_week, start_time, end_time, subjects(code, title), rooms(code)")
+    .order("day_of_week")
+    .order("start_time");
+
+  const sections = (data ?? []) as any[];
+
+  return (
+    <>
+      <PageHeader eyebrow="Teacher" title="Your sections">
+        Open a section to see its roster and enrol students. Attendance sessions
+        are started from inside a section.
+      </PageHeader>
+
+      {sections.length === 0 ? (
+        <Empty>
+          You have no sections yet. Ask the administrator to assign you one.
+        </Empty>
+      ) : (
+        <ul className="space-y-3">
+          {sections.map((s) => (
+            <li key={s.id}>
+              <Link
+                href={`/teacher/sections/${s.id}`}
+                className="block bg-white border border-[#D8DFE5] rounded-lg p-5 hover:border-[#0B6E5F] transition-colors"
+              >
+                <div className="flex items-baseline justify-between gap-4 flex-wrap">
+                  <div>
+                    <p className="font-medium">{s.name}</p>
+                    <p className="text-sm text-[#5A6B7A]">
+                      {s.subjects?.code} — {s.subjects?.title}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm">{DAY_NAMES[s.day_of_week]}</p>
+                    <p className="font-mono text-xs text-[#5A6B7A]">
+                      {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)} · {s.rooms?.code ?? "—"}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
