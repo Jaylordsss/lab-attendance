@@ -16,7 +16,7 @@
 insert into profiles (id, role, full_name)
 values (
   'f544b10f-ead5-4293-8a21-9a2ee5ef2a1d',
-  'Laboratory Custodian',
+  'admin',
   'Christian Henrich Garin'
 );
 
