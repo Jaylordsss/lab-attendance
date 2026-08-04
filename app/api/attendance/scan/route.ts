@@ -159,9 +159,14 @@ export async function POST(req: NextRequest) {
     return deny("device_mismatch");
   }
   if (!student.device_id) {
-    // First scan binds the device. Static-QR scans may not bind — that path is
-    // lower assurance and would let a shared phone claim an unbound account.
-    if (method === "static") return deny("device_not_bound");
+    // First scan binds the device, whichever code was used.
+    //
+    // An earlier version refused to bind on a printed code, reasoning that a
+    // shared phone could claim an unbound account. But reaching this line
+    // already required the student's own password, an open session, an
+    // enrolment in it and a position inside the geofence — and in a
+    // printed-code deployment there is no other path, so the rule locked
+    // every student out permanently.
     await getAdmin()
       .from("students")
       .update({ device_id: body.deviceId, device_bound_at: new Date().toISOString() })
