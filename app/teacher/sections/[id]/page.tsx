@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getServiceClient } from "@/lib/supabase/admin";
 import { requireTeacher } from "@/lib/require-teacher";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
 import { DAY_NAMES } from "@/app/admin/sections/days";
 import EnrolForm from "./form";
+import SessionPanel from "./session-panel";
 import { removeStudent } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +16,10 @@ type RosterRow = {
   full_name: string;
   birthdate: string;
 };
+
+function manilaToday(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+}
 
 export default async function SectionPage({
   params,
@@ -26,7 +32,7 @@ export default async function SectionPage({
 
   const { data: section } = await supabase
     .from("sections")
-    .select("id, name, day_of_week, start_time, end_time, teacher_id, subjects(code, title), rooms(code, name)")
+    .select("id, name, day_of_week, start_time, end_time, teacher_id, grace_minutes, subjects(code, title), rooms(code, name)")
     .eq("id", id)
     .maybeSingle();
 
@@ -37,13 +43,53 @@ export default async function SectionPage({
   });
   const roster = (rosterData ?? []) as RosterRow[];
 
+  // Today's session, if any.
+  const service = getServiceClient();
+  const { data: session } = await service
+    .from("class_sessions")
+    .select("id, status")
+    .eq("section_id", id)
+    .eq("session_date", manilaToday())
+    .maybeSingle();
+
+  let attendees: any[] = [];
+  if (session) {
+    const { data } = await service
+      .from("attendance")
+      .select("status, scanned_at, students(student_no), profiles:student_id(full_name)")
+      .eq("class_session_id", session.id)
+      .order("scanned_at", { ascending: false });
+
+    attendees = (data ?? []).map((a: any) => ({
+      status: a.status,
+      scanned_at: a.scanned_at,
+      student_no: a.students?.student_no ?? "",
+      full_name: a.profiles?.full_name ?? "",
+    }));
+  }
+
   const s = section as any;
 
   return (
     <>
-      <PageHeader eyebrow={`${s.subjects?.code} · ${DAY_NAMES[s.day_of_week]} ${s.start_time.slice(0, 5)}`} title={s.name}>
+      <PageHeader
+        eyebrow={`${s.subjects?.code} · ${DAY_NAMES[s.day_of_week]} ${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}`}
+        title={s.name}
+      >
         {s.subjects?.title} in {s.rooms?.name ?? "no laboratory assigned"}.
+        Scans after {s.grace_minutes} minutes are marked late.
       </PageHeader>
+
+      <div className="mb-8">
+        <SessionPanel
+          sectionId={id}
+          sessionId={(session?.id as string) ?? null}
+          isOpen={session?.status === "open"}
+          roomCode={s.rooms?.code ?? null}
+          attendees={attendees}
+          enrolledCount={roster.length}
+        />
+      </div>
 
       <div className="grid gap-8 md:grid-cols-[1fr_320px] md:items-start">
         <section>

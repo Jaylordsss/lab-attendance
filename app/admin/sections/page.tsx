@@ -25,7 +25,7 @@ export default async function SectionsPage() {
   const subjects = (subjectsRes.data ?? []) as { id: string; code: string; title: string }[];
   const rooms = (roomsRes.data ?? []) as { id: string; code: string; name: string }[];
   const teachers = ((staffRes.data ?? []) as any[]).filter(
-    (s) => s.role === "teacher" || s.role === "admin",
+    (s) => s.role === "teacher",
   );
 
   const ready = subjects.length > 0 && rooms.length > 0 && teachers.length > 0;
