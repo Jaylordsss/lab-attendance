@@ -12,6 +12,24 @@ type Attendee = {
   scanned_at: string;
 };
 
+type Rejection = {
+  full_name: string;
+  student_no: string;
+  reason: string;
+  at: string;
+};
+
+const REASON_LABEL: Record<string, string> = {
+  not_enrolled: "not in this class",
+  out_of_range: "too far away",
+  already_marked: "already marked in",
+  device_mismatch: "different phone",
+  no_open_session: "no class open",
+  invalid_code: "unrecognised code",
+  device_not_bound: "phone not registered",
+  unauthenticated: "not signed in",
+};
+
 export default function SessionPanel({
   sectionId,
   sessionId,
@@ -20,6 +38,7 @@ export default function SessionPanel({
   roomName,
   qrDataUrl,
   attendees,
+  rejections,
   enrolledCount,
 }: {
   sectionId: string;
@@ -29,6 +48,7 @@ export default function SessionPanel({
   roomName: string | null;
   qrDataUrl: string | null;
   attendees: Attendee[];
+  rejections: Rejection[];
   enrolledCount: number;
 }) {
   const router = useRouter();
@@ -37,7 +57,7 @@ export default function SessionPanel({
   // arrive.
   useEffect(() => {
     if (!isOpen) return;
-    const timer = setInterval(() => router.refresh(), 8000);
+    const timer = setInterval(() => router.refresh(), 4000);
     return () => clearInterval(timer);
   }, [isOpen, router]);
 
@@ -78,17 +98,27 @@ export default function SessionPanel({
           </p>
         </div>
 
-        <form action={isOpen ? endSession : startSession}>
-          <input type="hidden" name="sectionId" value={sectionId} />
-          {sessionId && <input type="hidden" name="sessionId" value={sessionId} />}
-          <button
-            type="submit"
-            className="rounded py-3 px-6 text-sm tracking-wide text-white transition-colors"
-            style={{ backgroundColor: isOpen ? "#A8321F" : "#0B6E5F" }}
-          >
-            {isOpen ? "End class" : "Start class"}
-          </button>
-        </form>
+        <div className="flex items-center gap-3">
+          {sessionId && (
+            <a
+              href={`/api/sessions/${sessionId}/report`}
+              className="border border-[#16202B] rounded py-3 px-5 text-sm hover:bg-[#16202B] hover:text-white transition-colors"
+            >
+              Download PDF
+            </a>
+          )}
+          <form action={isOpen ? endSession : startSession}>
+            <input type="hidden" name="sectionId" value={sectionId} />
+            {sessionId && <input type="hidden" name="sessionId" value={sessionId} />}
+            <button
+              type="submit"
+              className="rounded py-3 px-6 text-sm tracking-wide text-white transition-colors"
+              style={{ backgroundColor: isOpen ? "#A8321F" : "#0B6E5F" }}
+            >
+              {isOpen ? "End class" : "Start class"}
+            </button>
+          </form>
+        </div>
       </div>
 
       {isOpen && qrDataUrl && (
@@ -128,6 +158,30 @@ export default function SessionPanel({
               </p>
             </div>
           </div>
+
+          {rejections.length > 0 && (
+            <div className="mt-6 pt-5 border-t border-[#D3E3DE]">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[#A8321F]">
+                Refused scans
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {rejections.map((r, i) => (
+                  <li
+                    key={i}
+                    className="flex items-baseline justify-between gap-3 text-sm text-[#5A6B7A]"
+                  >
+                    <span>
+                      {r.full_name}{" "}
+                      <span className="font-mono text-xs">{r.student_no}</span>
+                    </span>
+                    <span className="text-xs" style={{ color: "#A8321F" }}>
+                      {REASON_LABEL[r.reason] ?? r.reason}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {attendees.length > 0 && (
             <ul className="mt-6 space-y-2">

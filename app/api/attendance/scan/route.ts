@@ -52,17 +52,31 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as Body | null;
   if (!body?.token || !body?.deviceId) return reject("bad_request");
 
+  // Filled in as we learn them, so a rejection can be logged with whatever
+  // context we had reached before failing.
+  const ctx: {
+    studentId?: string;
+    sessionId?: string;
+    roomId?: string;
+  } = {};
+
+  const deny = async (reason: string, code = 403) => {
+    await logRejection(ctx, reason, body);
+    return reject(reason, code);
+  };
+
   // -- 1. Session JWT --------------------------------------------------
   const jwt = req.headers.get("authorization")?.replace(/^Bearer /, "");
-  if (!jwt) return reject("unauthenticated");
+  if (!jwt) return deny("unauthenticated", 401);
 
   const { data: userData, error: userErr } = await getAdmin().auth.getUser(jwt);
-  if (userErr || !userData.user) return reject("unauthenticated");
+  if (userErr || !userData.user) return deny("unauthenticated", 401);
   const studentId = userData.user.id;
+  ctx.studentId = studentId;
 
   // -- 2. Token structure ----------------------------------------------
   const parsed = parseToken(body.token);
-  if (!parsed) return reject("invalid_code");
+  if (!parsed) return deny("invalid_code");
 
   const isOffline = Boolean(body.queuedAt);
 
@@ -75,17 +89,18 @@ export async function POST(req: NextRequest) {
       .select("id, qr_secret, status")
       .eq("id", parsed.sessionId)
       .single();
-    if (!cs) return reject("invalid_code");
+    if (!cs) return deny("invalid_code");
 
     // -- 3. Signature + freshness --------------------------------------
-    if (!verifySignature(parsed, cs.qr_secret)) return reject("invalid_code");
+    if (!verifySignature(parsed, cs.qr_secret)) return deny("invalid_code");
 
     const fresh = isOffline
       ? windowIsFreshForOfflineSync(parsed.window)
       : windowIsFresh(parsed.window);
-    if (!fresh) return reject("code_expired");
+    if (!fresh) return deny("code_expired");
 
     sessionId = cs.id;
+    ctx.sessionId = cs.id as string;
     method = isOffline ? "offline_sync" : "rotating";
   } else {
     const { data: room } = await getAdmin()
@@ -93,11 +108,12 @@ export async function POST(req: NextRequest) {
       .select("id, qr_secret, lat, lng, geofence_m, allow_static_qr")
       .eq("id", parsed.roomId)
       .single();
-    if (!room || !room.allow_static_qr) return reject("invalid_code");
-    if (!verifySignature(parsed, room.qr_secret)) return reject("invalid_code");
+    if (!room || !room.allow_static_qr) return deny("invalid_code");
+    ctx.roomId = room.id as string;
+    if (!verifySignature(parsed, room.qr_secret)) return deny("invalid_code");
 
     // Static codes are permanently photographable, so GPS is mandatory here.
-    if (!withinGeofence(body.lat, body.lng, room)) return reject("out_of_range");
+    if (!withinGeofence(body.lat, body.lng, room)) return deny("out_of_range");
 
     const { data: open } = await getAdmin()
       .from("class_sessions")
@@ -105,9 +121,10 @@ export async function POST(req: NextRequest) {
       .eq("room_id", room.id)
       .eq("status", "open")
       .maybeSingle();
-    if (!open) return reject("no_open_session");
+    if (!open) return deny("no_open_session");
 
     sessionId = open.id;
+    ctx.sessionId = open.id as string;
     method = "static";
   }
 
@@ -118,7 +135,7 @@ export async function POST(req: NextRequest) {
     .eq("id", sessionId)
     .single();
   if (!session || (session.status !== "open" && !isOffline)) {
-    return reject("no_open_session");
+    return deny("no_open_session");
   }
 
   // -- 5. Enrolled in this section -------------------------------------
@@ -128,7 +145,7 @@ export async function POST(req: NextRequest) {
     .eq("section_id", session.section_id)
     .eq("student_id", studentId)
     .maybeSingle();
-  if (!enrolled) return reject("not_enrolled");
+  if (!enrolled) return deny("not_enrolled");
 
   // -- 6. Device binding -----------------------------------------------
   const { data: student } = await getAdmin()
@@ -136,16 +153,15 @@ export async function POST(req: NextRequest) {
     .select("device_id, birthdate")
     .eq("user_id", studentId)
     .single();
-  if (!student) return reject("not_enrolled");
+  if (!student) return deny("not_enrolled");
 
   if (student.device_id && student.device_id !== body.deviceId) {
-    await logAudit(req, studentId, "device_mismatch", sessionId);
-    return reject("device_mismatch");
+    return deny("device_mismatch");
   }
   if (!student.device_id) {
     // First scan binds the device. Static-QR scans may not bind — that path is
     // lower assurance and would let a shared phone claim an unbound account.
-    if (method === "static") return reject("device_not_bound");
+    if (method === "static") return deny("device_not_bound");
     await getAdmin()
       .from("students")
       .update({ device_id: body.deviceId, device_bound_at: new Date().toISOString() })
@@ -169,8 +185,8 @@ export async function POST(req: NextRequest) {
   });
 
   if (insertErr) {
-    if (insertErr.code === "23505") return reject("already_marked");
-    return reject("server_error", 500);
+    if (insertErr.code === "23505") return deny("already_marked");
+    return deny("server_error", 500);
   }
 
   const { data: birthday } = await getAdmin().rpc("is_birthday_today", { uid: studentId });
@@ -212,6 +228,27 @@ function withinGeofence(
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(room.lat)) * Math.cos(toRad(lat)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) <= room.geofence_m;
+}
+
+/** Records a scan that did not become attendance. */
+async function logRejection(
+  ctx: { studentId?: string; sessionId?: string; roomId?: string },
+  reason: string,
+  body: Body | null,
+) {
+  try {
+    await getAdmin().from("scan_rejections").insert({
+      class_session_id: ctx.sessionId ?? null,
+      student_id: ctx.studentId ?? null,
+      room_id: ctx.roomId ?? null,
+      reason,
+      device_id: body?.deviceId ?? null,
+      lat: body?.lat ?? null,
+      lng: body?.lng ?? null,
+    });
+  } catch {
+    // Logging must never turn a clean rejection into a 500.
+  }
 }
 
 async function logAudit(

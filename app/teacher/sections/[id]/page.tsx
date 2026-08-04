@@ -81,6 +81,7 @@ export default async function SectionPage({
   }
 
   let attendees: any[] = [];
+  let rejections: any[] = [];
   if (session) {
     const { data } = await service
       .from("attendance")
@@ -93,6 +94,20 @@ export default async function SectionPage({
       scanned_at: a.scanned_at,
       student_no: a.students?.student_no ?? "",
       full_name: a.profiles?.full_name ?? "",
+    }));
+
+    const { data: rej } = await service
+      .from("scan_rejections")
+      .select("reason, at, students(student_no), profiles:student_id(full_name)")
+      .eq("class_session_id", session.id)
+      .order("at", { ascending: false })
+      .limit(20);
+
+    rejections = (rej ?? []).map((r: any) => ({
+      reason: r.reason,
+      at: r.at,
+      student_no: r.students?.student_no ?? "—",
+      full_name: r.profiles?.full_name ?? "Unknown",
     }));
   }
 
@@ -117,6 +132,7 @@ export default async function SectionPage({
           roomName={s.rooms?.name ?? null}
           qrDataUrl={qrDataUrl}
           attendees={attendees}
+          rejections={rejections}
           enrolledCount={roster.length}
         />
       </div>
