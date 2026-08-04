@@ -89,3 +89,8 @@ paper.
 - Attendance status is derived, not user-set: `present` if
   `scanned_at <= start_time + grace_minutes`, else `late`. Enrolled students
   with no row when the session closes are batch-inserted as `absent`.
+
+
+- Never construct a Supabase client, SDK, or any object requiring a secret at
+  module scope in a route file. Next.js evaluates module scope at build time.
+  Use a lazily-initialized getter cached in a module-level variable.

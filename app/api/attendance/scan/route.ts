@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   parseToken,
   verifySignature,
@@ -18,11 +18,27 @@ import {
 export const runtime = "nodejs";
 
 // Service role bypasses RLS. It must never be imported by a client component.
-const admin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } },
-);
+//
+// Built lazily. Constructing at module scope makes Next.js require the key at
+// BUILD time, which fails any deploy where the env vars are not present during
+// the build step. This client is only ever used inside a request.
+// Typed as the permissive default schema. Once the project stabilises, run
+//   npx supabase gen types typescript --project-id <ref> > lib/database.types.ts
+// and change this to SupabaseClient<Database> for real column checking.
+let _admin: SupabaseClient | null = null;
+
+function getAdmin() {
+  if (_admin) return _admin;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Set both in .env.local and in the Vercel project's Environment Variables.",
+    );
+  }
+  _admin = createClient(url, key, { auth: { persistSession: false } });
+  return _admin;
+}
 
 type Body = {
   token: string;
@@ -40,7 +56,7 @@ export async function POST(req: NextRequest) {
   const jwt = req.headers.get("authorization")?.replace(/^Bearer /, "");
   if (!jwt) return reject("unauthenticated");
 
-  const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+  const { data: userData, error: userErr } = await getAdmin().auth.getUser(jwt);
   if (userErr || !userData.user) return reject("unauthenticated");
   const studentId = userData.user.id;
 
@@ -54,7 +70,7 @@ export async function POST(req: NextRequest) {
   let method: "rotating" | "static" | "offline_sync";
 
   if (parsed.kind === "rotating") {
-    const { data: cs } = await admin
+    const { data: cs } = await getAdmin()
       .from("class_sessions")
       .select("id, qr_secret, status")
       .eq("id", parsed.sessionId)
@@ -72,7 +88,7 @@ export async function POST(req: NextRequest) {
     sessionId = cs.id;
     method = isOffline ? "offline_sync" : "rotating";
   } else {
-    const { data: room } = await admin
+    const { data: room } = await getAdmin()
       .from("rooms")
       .select("id, qr_secret, lat, lng, geofence_m, allow_static_qr")
       .eq("id", parsed.roomId)
@@ -83,7 +99,7 @@ export async function POST(req: NextRequest) {
     // Static codes are permanently photographable, so GPS is mandatory here.
     if (!withinGeofence(body.lat, body.lng, room)) return reject("out_of_range");
 
-    const { data: open } = await admin
+    const { data: open } = await getAdmin()
       .from("class_sessions")
       .select("id")
       .eq("room_id", room.id)
@@ -96,7 +112,7 @@ export async function POST(req: NextRequest) {
   }
 
   // -- 4. Session is open ----------------------------------------------
-  const { data: session } = await admin
+  const { data: session } = await getAdmin()
     .from("class_sessions")
     .select("id, section_id, status, sections(start_time, grace_minutes)")
     .eq("id", sessionId)
@@ -106,7 +122,7 @@ export async function POST(req: NextRequest) {
   }
 
   // -- 5. Enrolled in this section -------------------------------------
-  const { data: enrolled } = await admin
+  const { data: enrolled } = await getAdmin()
     .from("enrollments")
     .select("student_id")
     .eq("section_id", session.section_id)
@@ -115,7 +131,7 @@ export async function POST(req: NextRequest) {
   if (!enrolled) return reject("not_enrolled");
 
   // -- 6. Device binding -----------------------------------------------
-  const { data: student } = await admin
+  const { data: student } = await getAdmin()
     .from("students")
     .select("device_id, birthdate")
     .eq("user_id", studentId)
@@ -130,7 +146,7 @@ export async function POST(req: NextRequest) {
     // First scan binds the device. Static-QR scans may not bind — that path is
     // lower assurance and would let a shared phone claim an unbound account.
     if (method === "static") return reject("device_not_bound");
-    await admin
+    await getAdmin()
       .from("students")
       .update({ device_id: body.deviceId, device_bound_at: new Date().toISOString() })
       .eq("user_id", studentId);
@@ -142,7 +158,7 @@ export async function POST(req: NextRequest) {
     ? "late"
     : "present";
 
-  const { error: insertErr } = await admin.from("attendance").insert({
+  const { error: insertErr } = await getAdmin().from("attendance").insert({
     class_session_id: sessionId,
     student_id: studentId,
     status,
@@ -157,7 +173,7 @@ export async function POST(req: NextRequest) {
     return reject("server_error", 500);
   }
 
-  const { data: birthday } = await admin.rpc("is_birthday_today", { uid: studentId });
+  const { data: birthday } = await getAdmin().rpc("is_birthday_today", { uid: studentId });
 
   await logAudit(req, studentId, "attendance_scan", sessionId);
 
@@ -204,7 +220,7 @@ async function logAudit(
   action: string,
   target: string,
 ) {
-  await admin.from("audit_log").insert({
+  await getAdmin().from("audit_log").insert({
     actor_id: actorId,
     action,
     target,
