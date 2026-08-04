@@ -11,7 +11,10 @@
 -- policy here should still hold if an attacker can send any request body.
 -- =====================================================================
 
-create extension if not exists pgcrypto;
+-- Supabase provisions pgcrypto into the `extensions` schema, not `public`.
+-- Every function below that encrypts must therefore include `extensions`
+-- in its search_path, or pgp_sym_encrypt resolves to nothing.
+create extension if not exists pgcrypto with schema extensions;
 
 -- ------------------------------------------------------------------
 -- Teardown, in dependency order
@@ -285,15 +288,20 @@ create policy staff_read on staff for select
 create policy students_read on students for select
   using (user_id = auth.uid() or is_admin());
 
--- qr_secret must never reach a browser, so the base table stays admin-only
--- and everyone else uses the view below.
-create policy rooms_read on rooms for select using (is_admin());
+-- Teachers and students must be able to read a room's code and name — a
+-- section page joins to it. But qr_secret must never reach a browser.
+--
+-- Row-level policies cannot express "every row, but not this column", so the
+-- restriction is column-level: the select privilege is granted on the safe
+-- columns only. A client asking for qr_secret is refused by Postgres itself.
+-- The service role bypasses all of this, which is how the QR page still signs
+-- codes server-side.
+create policy rooms_read on rooms for select
+  using (auth.uid() is not null);
 
-create view rooms_public as
-  select id, code, name, geofence_m, allow_static_qr from rooms;
-
-revoke all on rooms_public from anon;
-grant select on rooms_public to authenticated;
+revoke select on rooms from anon, authenticated;
+grant select (id, code, name, geofence_m, allow_static_qr)
+  on rooms to authenticated;
 
 create policy subjects_read on subjects for select
   using (auth.uid() is not null);
@@ -358,7 +366,7 @@ create or replace function create_student_record(
   p_guardian_no   text,
   p_key           text
 ) returns void
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, extensions as $$
 begin
   insert into students (
     user_id, student_no, birthdate,
@@ -382,7 +390,7 @@ returns table (
   guardian_name  text,
   guardian_phone text
 )
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, extensions as $$
 begin
   if not is_admin() then
     raise exception 'not permitted';
