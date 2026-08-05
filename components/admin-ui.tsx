@@ -7,6 +7,25 @@ export const labelClass =
 export const buttonClass =
   "bg-[#16202B] text-white rounded py-2.5 px-5 text-sm tracking-wide transition-colors hover:bg-[#0B6E5F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B6E5F] disabled:opacity-50";
 
+/**
+ * Dropdowns get a box and a chevron rather than the underline used for text
+ * inputs. An underlined select reads as an already filled-in field, so people
+ * do not realise there is anything to open.
+ */
+export const selectClass =
+  "w-full appearance-none rounded border border-[#D8DFE5] bg-white py-2 pl-3 pr-9 text-sm outline-none focus:border-[#0B6E5F] bg-no-repeat";
+
+/** Chevron, as an inline style so no Tailwind arbitrary-URL escaping is needed. */
+export const selectChevron = {
+  backgroundImage:
+    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M3 4.5L6 7.5L9 4.5' stroke='%235A6B7A' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>\")",
+  backgroundSize: "12px 12px",
+  backgroundPosition: "right 0.75rem center",
+} as const;
+
+export const inputBoxClass =
+  "w-full rounded border border-[#D8DFE5] bg-white py-2 px-3 text-sm outline-none focus:border-[#0B6E5F]";
+
 export function PageHeader({
   eyebrow,
   title,

@@ -1,7 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { fieldClass, labelClass } from "@/components/admin-ui";
+import {
+  labelClass,
+  selectClass,
+  selectChevron,
+  inputBoxClass,
+} from "@/components/admin-ui";
 
 export default function Filters({
   departments,
@@ -35,7 +40,7 @@ export default function Filters({
           onKeyDown={(e) => {
             if (e.key === "Enter") update("q", (e.target as HTMLInputElement).value);
           }}
-          className={`${fieldClass} placeholder:text-[#B4BFC8]`}
+          className={`${inputBoxClass} placeholder:text-[#B4BFC8]`}
         />
       </div>
 
@@ -45,7 +50,8 @@ export default function Filters({
           id="role"
           value={role}
           onChange={(e) => update("role", e.target.value)}
-          className={`${fieldClass} appearance-none`}
+          className={selectClass}
+          style={selectChevron}
         >
           <option value="">Everyone</option>
           <option value="admin">Admin</option>
@@ -60,7 +66,8 @@ export default function Filters({
           id="department"
           value={department}
           onChange={(e) => update("department", e.target.value)}
-          className={`${fieldClass} appearance-none`}
+          className={selectClass}
+          style={selectChevron}
         >
           <option value="">All departments</option>
           {departments.map((d) => (

@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Empty, Th, Td } from "@/components/admin-ui";
-import { resetPassword } from "@/app/admin/teachers/actions";
+import { resetPassword, unbindDevice } from "./actions";
 import Filters from "./filters";
+import IdEditor from "./id-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ export default async function UsersPage({
     supabase.rpc("department_list"),
   ]);
 
+  if (usersRes.error) console.error("user_directory:", usersRes.error.message);
+
   const users = (usersRes.data ?? []) as Row[];
   const departments = ((deptRes.data ?? []) as { department: string }[]).map(
     (d) => d.department,
@@ -52,14 +55,16 @@ export default async function UsersPage({
       />
 
       {users.length === 0 ? (
-        <Empty>No accounts match those filters.</Empty>
+        <div className="mt-6">
+          <Empty>No accounts match those filters.</Empty>
+        </div>
       ) : (
         <div className="mt-6 bg-white border border-[#D8DFE5] rounded-lg p-6 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#E2E8ED]">
                 <Th>Name</Th>
-                <Th>ID</Th>
+                <Th>ID number</Th>
                 <Th>Role</Th>
                 <Th>Department</Th>
                 <Th>Status</Th>
@@ -72,10 +77,20 @@ export default async function UsersPage({
                   <Td>
                     <span className="block">{u.full_name}</span>
                     {u.email && (
-                      <span className="block text-xs text-[#5A6B7A]">{u.email}</span>
+                      <span className="block text-xs text-[#5A6B7A]">
+                        {u.email}
+                      </span>
                     )}
                   </Td>
-                  <Td><span className="font-mono">{u.identifier ?? "—"}</span></Td>
+                  <Td>
+                    <IdEditor
+                      userId={u.user_id}
+                      role={u.role}
+                      identifier={u.identifier}
+                      department={u.department}
+                      departments={departments}
+                    />
+                  </Td>
                   <Td>
                     <span className="text-xs uppercase tracking-[0.1em] text-[#5A6B7A]">
                       {u.role}
@@ -91,15 +106,28 @@ export default async function UsersPage({
                     </span>
                   </Td>
                   <Td>
-                    <form action={resetPassword}>
-                      <input type="hidden" name="userId" value={u.user_id} />
-                      <button
-                        type="submit"
-                        className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
-                      >
-                        Reset password
-                      </button>
-                    </form>
+                    <div className="flex flex-col gap-1 items-start">
+                      <form action={resetPassword}>
+                        <input type="hidden" name="userId" value={u.user_id} />
+                        <button
+                          type="submit"
+                          className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+                        >
+                          Reset password
+                        </button>
+                      </form>
+                      {u.role === "student" && (
+                        <form action={unbindDevice}>
+                          <input type="hidden" name="userId" value={u.user_id} />
+                          <button
+                            type="submit"
+                            className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+                          >
+                            Unbind phone
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </Td>
                 </tr>
               ))}
