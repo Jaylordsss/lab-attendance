@@ -100,7 +100,7 @@ export default async function SectionPage({
 
     const { data: rej, error: rejErr } = await service
       .from("scan_rejections")
-      .select("reason, at, distance_m, students(student_no, profiles(full_name))")
+      .select("reason, at, distance_m, profiles(full_name, students(student_no))")
       .eq("class_session_id", session.id)
       .order("at", { ascending: false })
       .limit(20);
@@ -111,8 +111,8 @@ export default async function SectionPage({
       reason: r.reason,
       at: r.at,
       distance_m: r.distance_m ?? null,
-      student_no: r.students?.student_no ?? "—",
-      full_name: r.students?.profiles?.full_name ?? "Unknown",
+      student_no: r.profiles?.students?.student_no ?? "—",
+      full_name: r.profiles?.full_name ?? "Unknown",
     }));
   }
 
