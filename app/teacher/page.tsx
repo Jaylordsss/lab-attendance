@@ -1,27 +1,37 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { PageHeader, Empty } from "@/components/admin-ui";
 import { DAY_NAMES } from "@/app/admin/sections/days";
+import NextClassBanner, { type NextClass } from "./next-class";
 
 export const dynamic = "force-dynamic";
 
 export default async function TeacherHome() {
+  const user = await getCurrentUser();
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("sections")
-    .select("id, name, day_of_week, start_time, end_time, subjects(code, title), rooms(code)")
-    .order("day_of_week")
-    .order("start_time");
+  const [sectionsRes, nextRes] = await Promise.all([
+    supabase
+      .from("sections")
+      .select(
+        "id, name, day_of_week, start_time, end_time, subjects(code, title), rooms(code)",
+      )
+      .order("day_of_week")
+      .order("start_time"),
+    supabase.rpc("my_next_class", { p_user_id: user!.id }),
+  ]);
 
-  const sections = (data ?? []) as any[];
+  const sections = (sectionsRes.data ?? []) as any[];
+  const next = ((nextRes.data ?? []) as NextClass[])[0] ?? null;
 
   return (
     <>
       <PageHeader eyebrow="Teacher" title="Your sections">
-        Open a section to see its roster and enrol students. Attendance sessions
-        are started from inside a section.
+        Open a section to see its roster and enrol students. Attendance
+        sessions are started from inside a section.
       </PageHeader>
+
+      {next && <NextClassBanner next={next} />}
 
       {sections.length === 0 ? (
         <Empty>
@@ -45,7 +55,8 @@ export default async function TeacherHome() {
                   <div className="text-right">
                     <p className="text-sm">{DAY_NAMES[s.day_of_week]}</p>
                     <p className="font-mono text-xs text-[#5A6B7A]">
-                      {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)} · {s.rooms?.code ?? "—"}
+                      {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)} ·{" "}
+                      {s.rooms?.code ?? "—"}
                     </p>
                   </div>
                 </div>
