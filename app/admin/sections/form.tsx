@@ -39,7 +39,7 @@ export default function SectionForm({
           id="name"
           name="name"
           required
-          placeholder="Grade 9 - Rizal"
+          placeholder="BSPT-3A"
           className={`${fieldClass} placeholder:text-[#B4BFC8]`}
         />
       </div>

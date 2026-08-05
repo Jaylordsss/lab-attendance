@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Empty, Th, Td } from "@/components/admin-ui";
-import { resetPassword, unbindDevice } from "./actions";
 import Filters from "./filters";
 import IdEditor from "./id-editor";
+import UserActions from "./user-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +36,15 @@ export default async function UsersPage({
   if (usersRes.error) console.error("user_directory:", usersRes.error.message);
 
   const users = (usersRes.data ?? []) as Row[];
-  const departments = ((deptRes.data ?? []) as {
+  const deptRows = (deptRes.data ?? []) as {
     department: string;
     code: string;
-  }[]).map((d) => d.department);
+  }[];
+  const departments = deptRows.map((d) => d.department);
+
+  // Full names run long. Showing the short code keeps the row readable, with
+  // the full name still available on hover.
+  const codeFor = new Map(deptRows.map((d) => [d.department, d.code]));
 
   return (
     <>
@@ -97,38 +102,34 @@ export default async function UsersPage({
                       {u.role}
                     </span>
                   </Td>
-                  <Td>{u.department ?? "—"}</Td>
+                  <Td>
+                    {u.department ? (
+                      <span
+                        className="font-mono"
+                        title={u.department}
+                      >
+                        {codeFor.get(u.department) ?? u.department}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </Td>
                   <Td>
                     <span
                       className="text-xs"
-                      style={{ color: u.status === "active" ? "#5A6B7A" : "#A8321F" }}
+                      style={{
+                        color: u.status === "active" ? "#5A6B7A" : "#A8321F",
+                      }}
                     >
                       {u.status}
                     </span>
                   </Td>
                   <Td>
-                    <div className="flex flex-col gap-1 items-start">
-                      <form action={resetPassword}>
-                        <input type="hidden" name="userId" value={u.user_id} />
-                        <button
-                          type="submit"
-                          className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
-                        >
-                          Reset password
-                        </button>
-                      </form>
-                      {u.role === "student" && (
-                        <form action={unbindDevice}>
-                          <input type="hidden" name="userId" value={u.user_id} />
-                          <button
-                            type="submit"
-                            className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
-                          >
-                            Unbind phone
-                          </button>
-                        </form>
-                      )}
-                    </div>
+                    <UserActions
+                      userId={u.user_id}
+                      name={u.full_name}
+                      isStudent={u.role === "student"}
+                    />
                   </Td>
                 </tr>
               ))}
