@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/require-admin";
-import { getServiceClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { piiKey } from "@/lib/require-teacher";
 import { formatPhPhone } from "@/lib/auth";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
@@ -39,12 +39,20 @@ export default async function StudentRecordPage({
   const { id } = await params;
   await requireAdmin();
 
-  const service = getServiceClient();
+  // The signed-in admin's client, not the service role. Both functions check
+  // is_admin(), which reads auth.uid() — and the service role has no user
+  // identity, so those checks would fail and the page would 404.
+  const supabase = await createClient();
 
   const [recordRes, summaryRes] = await Promise.all([
-    service.rpc("student_record", { p_user_id: id, p_key: piiKey() }),
-    service.rpc("student_attendance_summary", { p_user_id: id }),
+    supabase.rpc("student_record", { p_user_id: id, p_key: piiKey() }),
+    supabase.rpc("student_attendance_summary", { p_user_id: id }),
   ]);
+
+  if (recordRes.error) console.error("student_record:", recordRes.error.message);
+  if (summaryRes.error) {
+    console.error("student_attendance_summary:", summaryRes.error.message);
+  }
 
   const record = ((recordRes.data ?? []) as Record[])[0];
   if (!record) notFound();
