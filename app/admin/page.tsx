@@ -14,12 +14,27 @@ type Alert = {
   at: string;
 };
 
+/**
+ * Counting a specific column rather than *, because column-level grants on
+ * `rooms` keep qr_secret out of reach and a select * there is refused
+ * outright rather than omitting it.
+ *
+ * The column differs per table: `staff` is keyed on user_id, not id. Teachers
+ * are counted from `profiles` instead, so admins are not folded into the
+ * total.
+ */
 const TILES = [
-  { href: "/admin/rooms", label: "Laboratories", table: "rooms" },
-  { href: "/admin/subjects", label: "Subjects", table: "subjects" },
-  { href: "/admin/sections", label: "Sections", table: "sections" },
-  { href: "/admin/teachers", label: "Teachers", table: "staff" },
-];
+  { href: "/admin/rooms", label: "Laboratories", table: "rooms", column: "id" },
+  { href: "/admin/subjects", label: "Subjects", table: "subjects", column: "id" },
+  { href: "/admin/sections", label: "Sections", table: "sections", column: "id" },
+  {
+    href: "/admin/teachers",
+    label: "Teachers",
+    table: "profiles",
+    column: "id",
+    role: "teacher",
+  },
+] as const;
 
 const ALERT_LINK: Record<string, string> = {
   out_of_range: "/admin/attendance",
@@ -32,13 +47,16 @@ const ALERT_LINK: Record<string, string> = {
 export default async function AdminHome() {
   const supabase = await createClient();
 
-  // Count a specific column, not *. Column-level grants keep qr_secret out of
-  // reach, and a select * on rooms is refused outright rather than omitting it.
   const counts = await Promise.all(
     TILES.map(async (t) => {
-      const { count } = await supabase
+      let query = supabase
         .from(t.table)
-        .select("id", { count: "exact", head: true });
+        .select(t.column, { count: "exact", head: true });
+
+      if ("role" in t && t.role) query = query.eq("role", t.role);
+
+      const { count, error } = await query;
+      if (error) console.error(`count ${t.table}:`, error.message);
       return count ?? 0;
     }),
   );
