@@ -2,12 +2,25 @@
 
 import { useActionState, useState } from "react";
 import { enrolStudent, type EnrolState } from "./actions";
-import { fieldClass, labelClass, buttonClass, Notice } from "@/components/admin-ui";
+import {
+  fieldClass,
+  labelClass,
+  buttonClass,
+  selectClass,
+  selectChevron,
+  Notice,
+} from "@/components/admin-ui";
 import PhoneField from "@/app/account/phone-field";
 
 const initial: EnrolState = { error: null, created: null, info: null };
 
-export default function EnrolForm({ sectionId }: { sectionId: string }) {
+export default function EnrolForm({
+  sectionId,
+  departments,
+}: {
+  sectionId: string;
+  departments: { department: string; code: string }[];
+}) {
   const [state, formAction, pending] = useActionState(enrolStudent, initial);
   const [showNew, setShowNew] = useState(false);
 
@@ -83,6 +96,28 @@ export default function EnrolForm({ sectionId }: { sectionId: string }) {
             <p className="mt-2 text-xs text-[#5A6B7A]">
               The app greets them by name when they scan on this day.
             </p>
+          </div>
+
+          <div>
+            <label htmlFor="department" className={labelClass}>Department</label>
+            <select
+              id="department"
+              name="department"
+              defaultValue=""
+              className={selectClass}
+              style={selectChevron}
+            >
+              <option value="" disabled>
+                {departments.length === 0
+                  ? "No departments yet"
+                  : "Choose department"}
+              </option>
+              {departments.map((d) => (
+                <option key={d.department} value={d.department}>
+                  {d.code} — {d.department}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

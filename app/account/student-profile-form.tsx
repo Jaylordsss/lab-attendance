@@ -20,6 +20,7 @@ export default function StudentProfileForm({
   address,
   studentNo,
   birthdate,
+  department,
 }: {
   email: string;
   contactNo: string;
@@ -28,6 +29,7 @@ export default function StudentProfileForm({
   address: string;
   studentNo: string;
   birthdate: string;
+  department: string;
 }) {
   const [state, formAction, pending] = useActionState(
     updateStudentProfile,
@@ -64,6 +66,12 @@ export default function StudentProfileForm({
           <dt className={labelClass}>Birthday</dt>
           <dd className="font-mono">{birthdate}</dd>
         </div>
+        {department && (
+          <div>
+            <dt className={labelClass}>Department</dt>
+            <dd>{department}</dd>
+          </div>
+        )}
         <p className="text-xs text-[#5A6B7A] pt-1">
           Your name, number and birthday are set by the school. Ask your
           teacher if any of them is wrong.

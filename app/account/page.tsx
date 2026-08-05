@@ -42,6 +42,7 @@ export default async function AccountPage() {
         address={p.address ?? ""}
         studentNo={p.student_no ?? ""}
         birthdate={p.birthdate ?? ""}
+        department={p.department ?? ""}
       />
     );
   } else {

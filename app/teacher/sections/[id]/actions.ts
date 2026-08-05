@@ -69,13 +69,14 @@ export async function enrolStudent(
   // New student — needs an account first.
   const fullName = str(formData, "fullName");
   const birthdate = str(formData, "birthdate");
+  const department = str(formData, "department");
   const address = str(formData, "address");
   const guardianName = str(formData, "guardianName");
   const guardianNo = str(formData, "guardianNo");
 
-  if (!fullName || !birthdate || !guardianName || !guardianNo) {
+  if (!fullName || !birthdate || !department || !guardianName || !guardianNo) {
     return fail(
-      "That student number is new. Fill in name, birthday and guardian details to create the account.",
+      "That student number is new. Fill in name, birthday, department and guardian details to create the account.",
     );
   }
   if (Number.isNaN(Date.parse(birthdate))) {
@@ -111,6 +112,7 @@ export async function enrolStudent(
     p_user_id: userId,
     p_student_no: studentNo,
     p_birthdate: birthdate,
+    p_department: department,
     p_address: address,
     p_guardian_name: guardianName,
     p_guardian_no: guardianNo,

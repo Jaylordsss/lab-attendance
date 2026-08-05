@@ -46,6 +46,12 @@ export default async function SectionPage({
   });
   const roster = (rosterData ?? []) as RosterRow[];
 
+  const { data: deptData } = await supabase.rpc("department_list");
+  const departments = (deptData ?? []) as {
+    department: string;
+    code: string;
+  }[];
+
   const service = getServiceClient();
 
   const { data: session } = await service
@@ -207,7 +213,7 @@ export default async function SectionPage({
         </section>
 
         <Card>
-          <EnrolForm sectionId={id} />
+          <EnrolForm sectionId={id} departments={departments} />
         </Card>
       </div>
     </>
