@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
 import SectionForm from "./form";
@@ -56,7 +57,14 @@ export default async function SectionsPage() {
                 <tbody>
                   {sections.map((s) => (
                     <tr key={s.id} className="border-b border-[#F0F3F5]">
-                      <Td>{s.name}</Td>
+                      <Td>
+                        <Link
+                          href={`/admin/sections/${s.id}`}
+                          className="underline underline-offset-4 hover:text-[#0B6E5F]"
+                        >
+                          {s.name}
+                        </Link>
+                      </Td>
                       <Td><span className="font-mono">{s.subjects?.code}</span></Td>
                       <Td><span className="font-mono">{s.rooms?.code ?? "—"}</span></Td>
                       <Td>

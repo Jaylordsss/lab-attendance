@@ -1,8 +1,8 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
 import RoomForm from "./form";
 import { setStaticQr } from "./actions";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -56,13 +56,13 @@ export default async function RoomsPage() {
                   {rooms.map((room) => (
                     <tr key={room.id} className="border-b border-[#F0F3F5]">
                       <Td>
-  <Link
-    href={`/admin/rooms/${room.id}`}
-    className="font-mono underline underline-offset-4 hover:text-[#0B6E5F]"
-  >
-    {room.code}
-  </Link>
-</Td>
+                        <Link
+                          href={`/admin/rooms/${room.id}`}
+                          className="font-mono underline underline-offset-4 hover:text-[#0B6E5F]"
+                        >
+                          {room.code}
+                        </Link>
+                      </Td>
                       <Td>{room.name}</Td>
                       <Td>
                         {room.lat === null || room.lng === null ? (
