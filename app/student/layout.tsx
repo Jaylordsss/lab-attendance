@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentUser, createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 
 export default async function StudentLayout({
@@ -11,6 +11,17 @@ export default async function StudentLayout({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.role !== "student") redirect("/");
+
+  // A student with gaps in their record fills them before anything else.
+  // Guardian contact is the reason: the school needs a number that works on
+  // the day something goes wrong in a laboratory, and asking for it then is
+  // too late.
+  const supabase = await createClient();
+  const { data: complete } = await supabase.rpc("student_profile_complete", {
+    p_user_id: user.id,
+  });
+
+  if (complete === false) redirect("/account?complete=1");
 
   return (
     <div className="min-h-dvh bg-[#FBFAF7] text-[#16202B]">

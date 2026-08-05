@@ -10,9 +10,16 @@ import StudentProfileForm from "./student-profile-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ complete?: string }>;
+}) {
+  const { complete } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const mustComplete = complete === "1" && user.role === "student";
 
   const service = getServiceClient();
   const { data: authUser } = await service.auth.admin.getUserById(user.id);
@@ -74,12 +81,14 @@ export default async function AccountPage() {
       />
 
       <div className="relative mx-auto max-w-sm py-8">
-        <Link
-          href={HOME_FOR_ROLE[user.role]}
-          className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
-        >
-          Back to dashboard
-        </Link>
+        {!mustComplete && (
+          <Link
+            href={HOME_FOR_ROLE[user.role]}
+            className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+          >
+            Back to dashboard
+          </Link>
+        )}
 
         <header className="mt-4 mb-8">
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
@@ -90,6 +99,19 @@ export default async function AccountPage() {
             <p className="mt-1 text-sm text-[#5A6B7A] font-mono">{subtitle}</p>
           )}
         </header>
+
+        {mustComplete && (
+          <div className="mb-8 rounded-lg border-2 border-[#0B6E5F] bg-[#F2F8F6] p-4">
+            <p className="text-sm font-medium" style={{ color: "#0B6E5F" }}>
+              Finish setting up your account
+            </p>
+            <p className="mt-1 text-sm text-[#5A6B7A] leading-relaxed">
+              Your mobile number, address and guardian details are needed
+              before you can scan. The school has to be able to reach someone
+              if anything happens in the laboratory.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-8">
           {body}

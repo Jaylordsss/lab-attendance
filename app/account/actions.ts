@@ -232,6 +232,14 @@ export async function updateStudentProfile(
   await audit(user.id, "student_profile_updated", {});
   revalidatePath("/account");
 
+  // Everything required is present, so there is nothing left to hold them
+  // here. Send them to the scan screen rather than making them find it.
+  const { data: complete } = await supabase.rpc("student_profile_complete", {
+    p_user_id: user.id,
+  });
+
+  if (complete === true) redirect(HOME_FOR_ROLE.student);
+
   return ok(
     email
       ? "Saved. If you changed your email, confirm it from the link we sent."
