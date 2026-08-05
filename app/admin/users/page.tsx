@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Empty, Th, Td } from "@/components/admin-ui";
 import Filters from "./filters";
@@ -81,7 +82,16 @@ export default async function UsersPage({
               {users.map((u) => (
                 <tr key={u.user_id} className="border-b border-[#F0F3F5]">
                   <Td>
-                    <span className="block">{u.full_name}</span>
+                    {u.role === "student" ? (
+                      <Link
+                        href={`/admin/students/${u.user_id}`}
+                        className="block underline underline-offset-4 hover:text-[#0B6E5F]"
+                      >
+                        {u.full_name}
+                      </Link>
+                    ) : (
+                      <span className="block">{u.full_name}</span>
+                    )}
                     {u.email && (
                       <span className="block text-xs text-[#5A6B7A]">
                         {u.email}
