@@ -6,7 +6,13 @@ import RenameCell from "./rename-cell";
 
 export const dynamic = "force-dynamic";
 
-type Row = { id: string; name: string; staff_count: number };
+type Row = {
+  id: string;
+  name: string;
+  code: string;
+  faculty_count: number;
+  student_count: number;
+};
 
 export default async function DepartmentsPage() {
   const supabase = await createClient();
@@ -19,8 +25,9 @@ export default async function DepartmentsPage() {
   return (
     <>
       <PageHeader eyebrow="Admin" title="Departments">
-        Whatever you add here appears in every department dropdown. A
-        department with staff in it can't be deleted — move them first.
+        Whatever you add here appears in every department dropdown. Student
+        numbers are counted through the sections each department's teachers
+        handle.
       </PageHeader>
 
       <div className="grid gap-8 md:grid-cols-[1fr_320px] md:items-start">
@@ -34,8 +41,10 @@ export default async function DepartmentsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#E2E8ED]">
+                    <Th>Short name</Th>
                     <Th>Department</Th>
-                    <Th>Staff</Th>
+                    <Th>Faculty</Th>
+                    <Th>Students</Th>
                     <Th>{""}</Th>
                   </tr>
                 </thead>
@@ -43,13 +52,19 @@ export default async function DepartmentsPage() {
                   {departments.map((d) => (
                     <tr key={d.id} className="border-b border-[#F0F3F5]">
                       <Td>
-                        <RenameCell id={d.id} name={d.name} />
+                        <span className="font-mono">{d.code}</span>
                       </Td>
                       <Td>
-                        <span className="font-mono">{d.staff_count}</span>
+                        <RenameCell id={d.id} name={d.name} code={d.code} />
                       </Td>
                       <Td>
-                        {Number(d.staff_count) === 0 ? (
+                        <span className="font-mono">{d.faculty_count}</span>
+                      </Td>
+                      <Td>
+                        <span className="font-mono">{d.student_count}</span>
+                      </Td>
+                      <Td>
+                        {Number(d.faculty_count) === 0 ? (
                           <form action={deleteDepartment}>
                             <input type="hidden" name="id" value={d.id} />
                             <input type="hidden" name="name" value={d.name} />

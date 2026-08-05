@@ -24,9 +24,10 @@ export default async function TeachersPage() {
   ]);
 
   const staff = (staffRes.data ?? []) as StaffRow[];
-  const departments = ((deptRes.data ?? []) as { department: string }[]).map(
-    (d) => d.department,
-  );
+  const departments = (deptRes.data ?? []) as {
+    department: string;
+    code: string;
+  }[];
 
   return (
     <>

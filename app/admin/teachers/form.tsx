@@ -16,7 +16,7 @@ const initial: TeacherState = { error: null, created: null };
 export default function TeacherForm({
   departments,
 }: {
-  departments: string[];
+  departments: { department: string; code: string }[];
 }) {
   const [state, formAction, pending] = useActionState(createTeacher, initial);
 
@@ -87,7 +87,9 @@ export default function TeacherForm({
             {departments.length === 0 ? "Add a department first" : "Choose department"}
           </option>
           {departments.map((d) => (
-            <option key={d} value={d}>{d}</option>
+            <option key={d.department} value={d.department}>
+              {d.code} — {d.department}
+            </option>
           ))}
         </select>
       </div>

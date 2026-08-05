@@ -2,16 +2,18 @@
 
 import { useActionState, useState } from "react";
 import { renameDepartment, type DeptState } from "./actions";
-import { inputBoxClass, Notice } from "@/components/admin-ui";
+import { inputBoxClass, labelClass, Notice } from "@/components/admin-ui";
 
 const initial: DeptState = { error: null, success: null };
 
 export default function RenameCell({
   id,
   name,
+  code,
 }: {
   id: string;
   name: string;
+  code: string;
 }) {
   const [state, formAction, pending] = useActionState(renameDepartment, initial);
   const [editing, setEditing] = useState(false);
@@ -24,25 +26,44 @@ export default function RenameCell({
           onClick={() => setEditing(true)}
           className="ml-2 text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
         >
-          Rename
+          Edit
         </button>
       </div>
     );
   }
 
   return (
-    <form action={formAction} className="space-y-2 min-w-[200px]">
+    <form action={formAction} className="space-y-3 min-w-[220px]">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="oldName" value={name} />
-      <input
-        name="name"
-        defaultValue={name}
-        required
-        autoFocus
-        maxLength={60}
-        className={inputBoxClass}
-      />
+
+      <div>
+        <label className={labelClass}>Full name</label>
+        <input
+          name="name"
+          defaultValue={name}
+          required
+          autoFocus
+          maxLength={60}
+          className={inputBoxClass}
+        />
+      </div>
+
+      <div>
+        <label className={labelClass}>Short name</label>
+        <input
+          name="code"
+          defaultValue={code}
+          required
+          maxLength={10}
+          autoCapitalize="characters"
+          spellCheck={false}
+          className={`${inputBoxClass} font-mono`}
+        />
+      </div>
+
       {state.error && <Notice>{state.error}</Notice>}
+
       <div className="flex gap-2">
         <button
           type="submit"

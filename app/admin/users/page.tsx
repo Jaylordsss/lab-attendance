@@ -36,9 +36,10 @@ export default async function UsersPage({
   if (usersRes.error) console.error("user_directory:", usersRes.error.message);
 
   const users = (usersRes.data ?? []) as Row[];
-  const departments = ((deptRes.data ?? []) as { department: string }[]).map(
-    (d) => d.department,
-  );
+  const departments = ((deptRes.data ?? []) as {
+    department: string;
+    code: string;
+  }[]).map((d) => d.department);
 
   return (
     <>

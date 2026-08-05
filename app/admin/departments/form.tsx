@@ -19,15 +19,32 @@ export default function DeptForm() {
       <h2 className="text-sm font-medium">Add a department</h2>
 
       <div>
-        <label htmlFor="name" className={labelClass}>Name</label>
+        <label htmlFor="name" className={labelClass}>Full name</label>
         <input
           id="name"
           name="name"
           required
           maxLength={60}
-          placeholder="Science"
+          placeholder="College of Information Technology"
           className={`${inputBoxClass} placeholder:text-[#B4BFC8]`}
         />
+      </div>
+
+      <div>
+        <label htmlFor="code" className={labelClass}>Short name</label>
+        <input
+          id="code"
+          name="code"
+          required
+          maxLength={10}
+          autoCapitalize="characters"
+          spellCheck={false}
+          placeholder="CITE"
+          className={`${inputBoxClass} font-mono placeholder:text-[#B4BFC8]`}
+        />
+        <p className="mt-2 text-xs text-[#5A6B7A]">
+          2–10 characters. Used wherever space is tight.
+        </p>
       </div>
 
       {state.error && <Notice>{state.error}</Notice>}
