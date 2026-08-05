@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getServiceClient } from "@/lib/supabase/admin";
 import {
   studentNoToEmail,
+  normalizeStudentNo,
   normalizeFacultyId,
   HOME_FOR_ROLE,
   type Role,
@@ -18,9 +19,14 @@ export type LoginState = { error: string | null };
  * Three accepted forms, checked in this order:
  *   1. Anything containing an @ is already an email.
  *   2. A faculty ID belonging to a staff member.
- *   3. Otherwise a student number, mapped to its synthetic address.
+ *   3. A student number.
  *
- * The faculty lookup runs through the service client rather than a database
+ * Both ID lookups resolve to the account's *actual* auth email rather than a
+ * derived one. Students start on a synthetic @students.invalid address but may
+ * replace it with a real one, and their student number has to keep working
+ * either way.
+ *
+ * All of this runs through the service client rather than a database
  * function, so nothing that maps ID numbers to email addresses is reachable
  * by an unauthenticated caller.
  */
@@ -41,6 +47,21 @@ async function resolveEmail(identifier: string): Promise<string> {
   if (staff) {
     const { data } = await service.auth.admin.getUserById(
       staff.user_id as string,
+    );
+    if (data.user?.email) return data.user.email;
+  }
+
+  const studentNo = normalizeStudentNo(value);
+
+  const { data: student } = await service
+    .from("students")
+    .select("user_id")
+    .ilike("student_no", studentNo)
+    .maybeSingle();
+
+  if (student) {
+    const { data } = await service.auth.admin.getUserById(
+      student.user_id as string,
     );
     if (data.user?.email) return data.user.email;
   }

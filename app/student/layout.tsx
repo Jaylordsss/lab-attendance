@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
@@ -21,14 +22,22 @@ export default async function StudentLayout({
             </p>
             <p className="text-sm font-medium">{user.fullName}</p>
           </div>
-          <form action={signOut}>
-            <button
-              type="submit"
+          <div className="flex items-baseline gap-4">
+            <Link
+              href="/account"
               className="text-sm text-[#5A6B7A] underline underline-offset-4"
             >
-              Sign out
-            </button>
-          </form>
+              Account
+            </Link>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="text-sm text-[#5A6B7A] underline underline-offset-4"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </div>
       <main className="mx-auto max-w-md px-6 py-8">{children}</main>

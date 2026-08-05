@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateContact, type ProfileState } from "./actions";
+import { updateStaffContact, type ActionState } from "./actions";
 import {
   fieldClass,
   labelClass,
@@ -9,16 +9,19 @@ import {
   Notice,
 } from "@/components/admin-ui";
 
-const initial: ProfileState = { error: null, success: null };
+const initial: ActionState = { error: null, success: null };
 
-export default function ContactForm({
+export default function StaffContactForm({
   email,
   contactNo,
 }: {
   email: string;
   contactNo: string;
 }) {
-  const [state, formAction, pending] = useActionState(updateContact, initial);
+  const [state, formAction, pending] = useActionState(
+    updateStaffContact,
+    initial,
+  );
 
   return (
     <form
@@ -57,9 +60,6 @@ export default function ContactForm({
             className={`${fieldClass} font-mono placeholder:text-[#B4BFC8]`}
           />
         </div>
-        <p className="mt-2 text-xs text-[#5A6B7A]">
-          Philippine mobile only. Leave blank to remove it.
-        </p>
       </div>
 
       {state.error && <Notice>{state.error}</Notice>}

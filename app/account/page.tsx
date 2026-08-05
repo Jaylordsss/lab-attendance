@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getServiceClient } from "@/lib/supabase/admin";
-import { formatPhPhone, HOME_FOR_ROLE } from "@/lib/auth";
-import PasswordForm from "./form";
-import ContactForm from "./contact-form";
+import { piiKey } from "@/lib/require-teacher";
+import { formatPhPhone, isSyntheticStudentEmail, HOME_FOR_ROLE } from "@/lib/auth";
+import PasswordForm from "./password-form";
+import StaffContactForm from "./staff-contact-form";
+import StudentProfileForm from "./student-profile-form";
 
 export const dynamic = "force-dynamic";
 
@@ -12,31 +14,52 @@ export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const isStaff = user.role !== "student";
+  const service = getServiceClient();
+  const { data: authUser } = await service.auth.admin.getUserById(user.id);
+  const rawEmail = authUser.user?.email ?? "";
+  const email = isSyntheticStudentEmail(rawEmail) ? "" : rawEmail;
 
-  let email = "";
-  let contactNo = "";
-  let facultyId = "";
-  let department = "";
+  // A one-time code can only be sent to an inbox that exists.
+  const canUseCode = Boolean(email) && Boolean(authUser.user?.email_confirmed_at);
 
-  if (isStaff) {
-    const service = getServiceClient();
+  let body = null;
+  let subtitle = "";
 
-    const [{ data: authUser }, { data: staff }] = await Promise.all([
-      service.auth.admin.getUserById(user.id),
-      service
-        .from("staff")
-        .select("faculty_id, department, contact_no")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-    ]);
+  if (user.role === "student") {
+    const { data } = await service.rpc("my_student_profile", {
+      p_user_id: user.id,
+      p_key: piiKey(),
+    });
+    const p = (data ?? [])[0] ?? {};
 
-    email = authUser.user?.email ?? "";
-    facultyId = (staff?.faculty_id as string) ?? "";
-    department = (staff?.department as string) ?? "";
-    contactNo = staff?.contact_no
-      ? formatPhPhone(staff.contact_no as string)
-      : "";
+    subtitle = `${p.student_no ?? ""}`;
+    body = (
+      <StudentProfileForm
+        email={email}
+        contactNo={p.contact_no ? formatPhPhone(p.contact_no) : ""}
+        guardianName={p.guardian_name ?? ""}
+        guardianNo={p.guardian_phone ? formatPhPhone(p.guardian_phone) : ""}
+        address={p.address ?? ""}
+        studentNo={p.student_no ?? ""}
+        birthdate={p.birthdate ?? ""}
+      />
+    );
+  } else {
+    const { data: staff } = await service
+      .from("staff")
+      .select("faculty_id, department, contact_no")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    subtitle = [staff?.faculty_id, staff?.department].filter(Boolean).join(" · ");
+    body = (
+      <StaffContactForm
+        email={email}
+        contactNo={
+          staff?.contact_no ? formatPhPhone(staff.contact_no as string) : ""
+        }
+      />
+    );
   }
 
   return (
@@ -61,22 +84,17 @@ export default async function AccountPage() {
 
         <header className="mt-4 mb-8">
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
-            {user.fullName}
+            Your account
           </p>
-          <h1 className="mt-1 text-2xl font-medium">Your account</h1>
-          {isStaff && facultyId && (
-            <p className="mt-2 text-sm text-[#5A6B7A]">
-              <span className="font-mono">{facultyId}</span>
-              {department && ` · ${department}`}
-            </p>
+          <h1 className="mt-1 text-2xl font-medium">{user.fullName}</h1>
+          {subtitle && (
+            <p className="mt-1 text-sm text-[#5A6B7A] font-mono">{subtitle}</p>
           )}
         </header>
 
         <div className="space-y-8">
-          {isStaff && (
-            <ContactForm email={email} contactNo={contactNo} />
-          )}
-          <PasswordForm />
+          {body}
+          <PasswordForm needsCode={canUseCode} />
         </div>
       </div>
     </main>
