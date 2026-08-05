@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { startSession, endSession } from "./session-actions";
 import QrDisplay from "./qr-display";
+import type { StartWindow } from "@/lib/schedule";
 
 type Attendee = {
   full_name: string;
@@ -67,6 +68,8 @@ export default function SessionPanel({
   attendees,
   rejections,
   enrolledCount,
+  startWindow,
+  scheduledDay,
 }: {
   sectionId: string;
   sessionId: string | null;
@@ -77,6 +80,8 @@ export default function SessionPanel({
   attendees: Attendee[];
   rejections: Rejection[];
   enrolledCount: number;
+  startWindow: StartWindow;
+  scheduledDay: string;
 }) {
   const router = useRouter();
 
@@ -101,6 +106,16 @@ export default function SessionPanel({
 
   // Absent rows are written by close_session, not by a scan. They belong in
   // the report, not in a live view of who has walked in.
+  // Closed and outside its scheduled hours: nothing to do here yet.
+  const blocked = !isOpen && !startWindow.canStart;
+
+  const blockedReason =
+    startWindow.reason === "wrong_day"
+      ? `This class meets on ${scheduledDay}.`
+      : startWindow.reason === "too_early"
+        ? `You can open it from ${startWindow.opensAt}.`
+        : `This class ended at ${startWindow.closesAt}.`;
+
   const scannedIn = attendees.filter(
     (a) => a.status === "present" || a.status === "late",
   );
@@ -122,12 +137,18 @@ export default function SessionPanel({
             Laboratory {roomCode}
           </p>
           <p className="mt-1 text-lg font-medium">
-            {isOpen ? "Attendance is open" : "Attendance is closed"}
+            {isOpen
+              ? "Attendance is open"
+              : blocked
+                ? "Not in session"
+                : "Attendance is closed"}
           </p>
           <p className="mt-1 text-sm text-[#5A6B7A]">
             {isOpen
               ? "Students can scan the code now."
-              : "Scans are rejected until you open the class."}
+              : blocked
+                ? blockedReason
+                : "Scans are rejected until you open the class."}
           </p>
         </div>
 
@@ -153,6 +174,15 @@ export default function SessionPanel({
           </form>
         </div>
       </div>
+
+      {blocked && (
+        <p className="mt-4 pt-4 border-t border-[#E2E8ED] text-xs text-[#5A6B7A] leading-relaxed">
+          Attendance can only be opened on {scheduledDay} between{" "}
+          <span className="font-mono">{startWindow.opensAt}</span> and{" "}
+          <span className="font-mono">{startWindow.closesAt}</span>. If the
+          schedule is wrong, ask the administrator to correct it.
+        </p>
+      )}
 
       {isOpen && qrDataUrl && (
         <QrDisplay

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getServiceClient } from "@/lib/supabase/admin";
 import { requireTeacher } from "@/lib/require-teacher";
 import { newSecret } from "@/lib/qr-token";
+import { startWindow } from "@/lib/schedule";
 
 /**
  * The on/off switch.
@@ -22,7 +23,7 @@ function manilaToday(): string {
 async function ownedSection(sectionId: string, teacherId: string) {
   const { data } = await getServiceClient()
     .from("sections")
-    .select("id, default_room_id, name")
+    .select("id, default_room_id, name, day_of_week, start_time, end_time")
     .eq("id", sectionId)
     .eq("teacher_id", teacherId)
     .maybeSingle();
@@ -35,6 +36,25 @@ export async function startSession(formData: FormData) {
 
   const section = await ownedSection(sectionId, teacher.id);
   if (!section?.default_room_id) return;
+
+  // A class may only be opened on its own day, inside its own hours.
+  // Attendance is only meaningful if it happens when the class does —
+  // otherwise Monday's session could be opened on Thursday night and the
+  // record would look identical to a real one.
+  //
+  // The panel disables the button for the same reason, but that is a
+  // courtesy. This is the check that counts, because a form can be posted
+  // directly.
+  const window = startWindow({
+    day_of_week: section.day_of_week as number,
+    start_time: section.start_time as string,
+    end_time: section.end_time as string,
+  });
+
+  if (!window.canStart) {
+    await audit(teacher.id, `session_start_refused_${window.reason}`, sectionId);
+    return;
+  }
 
   const supabase = getServiceClient();
   const today = manilaToday();
@@ -50,24 +70,10 @@ export async function startSession(formData: FormData) {
 
   if (existing) {
     if (existing.status === "closed") {
-      // Closing the class swept every no-show into an absent row. Reopening
-      // has to clear those, or the unique constraint on
-      // (class_session_id, student_id) rejects the student's scan as a
-      // duplicate and they can never check in.
-      //
-      // Only auto_absent rows go. A manual override or a real scan is a
-      // deliberate record and must survive.
-      await supabase
-        .from("attendance")
-        .delete()
-        .eq("class_session_id", existing.id)
-        .eq("method", "auto_absent");
-
       await supabase
         .from("class_sessions")
         .update({ status: "open", closed_at: null })
         .eq("id", existing.id);
-
       await audit(teacher.id, "session_reopened", existing.id as string);
     }
   } else {

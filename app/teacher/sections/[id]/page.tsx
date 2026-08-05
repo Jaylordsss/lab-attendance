@@ -6,6 +6,7 @@ import { requireTeacher } from "@/lib/require-teacher";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
 import { DAY_NAMES } from "@/app/admin/sections/days";
 import { makeStaticToken, tokenUrl } from "@/lib/qr-token";
+import { startWindow } from "@/lib/schedule";
 import EnrolForm from "./form";
 import SessionPanel from "./session-panel";
 import { removeStudent } from "./actions";
@@ -118,6 +119,12 @@ export default async function SectionPage({
 
   const s = section as any;
 
+  const window = startWindow({
+    day_of_week: s.day_of_week,
+    start_time: s.start_time,
+    end_time: s.end_time,
+  });
+
   return (
     <>
       <PageHeader
@@ -139,6 +146,8 @@ export default async function SectionPage({
           attendees={attendees}
           rejections={rejections}
           enrolledCount={roster.length}
+          startWindow={window}
+          scheduledDay={DAY_NAMES[s.day_of_week]}
         />
       </div>
 
