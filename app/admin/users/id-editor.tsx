@@ -2,7 +2,6 @@
 
 import { useActionState, useState } from "react";
 import { updateIdentifier, type EditState } from "./actions";
-import { DEPARTMENTS } from "@/lib/auth";
 import {
   inputBoxClass,
   selectClass,
@@ -29,7 +28,7 @@ export default function IdEditor({
   const [editing, setEditing] = useState(false);
 
   const isStaff = role !== "student";
-  const options = Array.from(new Set([...departments, ...DEPARTMENTS]));
+  const options = departments;
 
   if (!editing) {
     return (

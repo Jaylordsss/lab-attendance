@@ -109,18 +109,9 @@ export function formatPhPhone(stored: string): string {
   return `0${m[1]} ${m[2]} ${m[3]}`;
 }
 
-/** Suggestions only. The field stays free text so nothing valid is blocked. */
-export const DEPARTMENTS = [
-  "Science",
-  "Mathematics",
-  "English",
-  "Filipino",
-  "Araling Panlipunan",
-  "TLE",
-  "MAPEH",
-  "Values Education",
-  "Administration",
-] as const;
+/* Departments live in the `departments` table, managed by the admin. There is
+ * deliberately no list here — every school names them differently, and a list
+ * only the developer can change is a list that goes stale. */
 
 export type Role = "admin" | "teacher" | "student";
 

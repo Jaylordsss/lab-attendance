@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import { createTeacher, type TeacherState } from "./actions";
-import { DEPARTMENTS } from "@/lib/auth";
 import {
   fieldClass,
   labelClass,
@@ -14,7 +13,11 @@ import {
 
 const initial: TeacherState = { error: null, created: null };
 
-export default function TeacherForm() {
+export default function TeacherForm({
+  departments,
+}: {
+  departments: string[];
+}) {
   const [state, formAction, pending] = useActionState(createTeacher, initial);
 
   if (state.created) {
@@ -80,8 +83,10 @@ export default function TeacherForm() {
           className={selectClass}
           style={selectChevron}
         >
-          <option value="" disabled>Choose department</option>
-          {DEPARTMENTS.map((d) => (
+          <option value="" disabled>
+            {departments.length === 0 ? "Add a department first" : "Choose department"}
+          </option>
+          {departments.map((d) => (
             <option key={d} value={d}>{d}</option>
           ))}
         </select>

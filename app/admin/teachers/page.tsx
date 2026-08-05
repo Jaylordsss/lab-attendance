@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
+import { formatPhPhone } from "@/lib/auth";
 import TeacherForm from "./form";
 
 export const dynamic = "force-dynamic";
@@ -15,16 +17,34 @@ type StaffRow = {
 
 export default async function TeachersPage() {
   const supabase = await createClient();
-  const { data } = await supabase.rpc("staff_directory");
-  const staff = (data ?? []) as StaffRow[];
+
+  const [staffRes, deptRes] = await Promise.all([
+    supabase.rpc("staff_directory"),
+    supabase.rpc("department_list"),
+  ]);
+
+  const staff = (staffRes.data ?? []) as StaffRow[];
+  const departments = ((deptRes.data ?? []) as { department: string }[]).map(
+    (d) => d.department,
+  );
 
   return (
     <>
       <PageHeader eyebrow="Admin" title="Teachers">
         Accounts are created here, never self-registered. A temporary password
-        is shown once — pass it on, and have the teacher change it after their
-        first sign-in.
+        is shown once — pass it on, and the teacher chooses their own at first
+        sign-in.
       </PageHeader>
+
+      {departments.length === 0 && (
+        <p className="mb-6 text-sm border-l-2 border-[#A8321F] pl-3 text-[#A8321F]">
+          No departments exist yet.{" "}
+          <Link href="/admin/departments" className="underline underline-offset-4">
+            Add one first
+          </Link>
+          .
+        </p>
+      )}
 
       <div className="grid gap-8 md:grid-cols-[1fr_320px] md:items-start">
         <section>
@@ -68,7 +88,7 @@ export default async function TeachersPage() {
         </section>
 
         <Card>
-          <TeacherForm />
+          <TeacherForm departments={departments} />
         </Card>
       </div>
     </>
