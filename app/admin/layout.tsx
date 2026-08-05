@@ -4,10 +4,12 @@ import { signOut } from "@/app/login/actions";
 
 const NAV = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/attendance", label: "Attendance" },
   { href: "/admin/rooms", label: "Laboratories" },
   { href: "/admin/teachers", label: "Teachers" },
   { href: "/admin/subjects", label: "Subjects" },
   { href: "/admin/sections", label: "Sections" },
+  { href: "/admin/users", label: "All users" },
 ];
 
 export default async function AdminLayout({
@@ -20,7 +22,7 @@ export default async function AdminLayout({
   return (
     <div className="min-h-dvh bg-[#FBFAF7] text-[#16202B]">
       <div className="border-b border-[#D8DFE5] bg-white">
-        <div className="mx-auto max-w-5xl px-6 py-4 flex items-baseline justify-between gap-4">
+        <div className="mx-auto max-w-6xl px-6 py-4 flex items-baseline justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
               General Science Laboratory
@@ -37,7 +39,7 @@ export default async function AdminLayout({
           </form>
         </div>
 
-        <nav className="mx-auto max-w-5xl px-6">
+        <nav className="mx-auto max-w-6xl px-6">
           <ul className="flex gap-6 overflow-x-auto">
             {NAV.map((item) => (
               <li key={item.href}>
@@ -53,7 +55,7 @@ export default async function AdminLayout({
         </nav>
       </div>
 
-      <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
+      <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
     </div>
   );
 }
