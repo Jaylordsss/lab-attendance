@@ -9,6 +9,7 @@ import { makeStaticToken, tokenUrl } from "@/lib/qr-token";
 import { startWindow } from "@/lib/schedule";
 import EnrolForm from "./form";
 import SessionPanel from "./session-panel";
+import MarkRow, { type RosterEntry } from "./mark-row";
 import { removeStudent } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -89,7 +90,14 @@ export default async function SectionPage({
 
   let attendees: any[] = [];
   let rejections: any[] = [];
+  let sessionRoster: RosterEntry[] = [];
   if (session) {
+    const { data: sr, error: srErr } = await service.rpc("session_roster", {
+      p_session_id: session.id,
+    });
+    if (srErr) console.error("session_roster:", srErr.message);
+    sessionRoster = (sr ?? []) as RosterEntry[];
+
     const { data, error: attErr } = await service
       .from("attendance")
       .select("status, scanned_at, students(student_no, profiles(full_name))")
@@ -166,7 +174,25 @@ export default async function SectionPage({
             </span>
           </div>
 
-          {roster.length === 0 ? (
+          {session && sessionRoster.length > 0 ? (
+            <div className="bg-white border border-[#D8DFE5] rounded-lg p-6">
+              <ul className="divide-y divide-[#F0F3F5]">
+                {sessionRoster.map((entry) => (
+                  <li key={entry.student_id} className="py-3 first:pt-0 last:pb-0">
+                    <MarkRow
+                      sectionId={id}
+                      sessionId={session.id as string}
+                      entry={entry}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-xs text-[#5A6B7A] leading-relaxed">
+                Mark a student by hand when their phone cannot scan. Every
+                manual mark needs a reason and is kept with the record.
+              </p>
+            </div>
+          ) : roster.length === 0 ? (
             <Empty>Nobody enrolled yet. Add your first student.</Empty>
           ) : (
             <div className="bg-white border border-[#D8DFE5] rounded-lg p-6 overflow-x-auto">
