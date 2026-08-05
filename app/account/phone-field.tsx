@@ -18,12 +18,15 @@ export default function PhoneField({
   label,
   defaultValue = "",
   hint,
+  onComplete,
 }: {
   id: string;
   name: string;
   label: string;
   defaultValue?: string;
   hint?: string;
+  /** Fires with true once ten digits are present, false whenever they are not. */
+  onComplete?: (complete: boolean) => void;
 }) {
   const [value, setValue] = useState(defaultValue);
 
@@ -32,7 +35,10 @@ export default function PhoneField({
     // "0917…" and "63917…" are both common; keep only the subscriber part.
     if (digits.startsWith("63")) digits = digits.slice(2);
     if (digits.startsWith("0")) digits = digits.slice(1);
-    setValue(digits.slice(0, PH_MOBILE_DIGITS));
+
+    const next = digits.slice(0, PH_MOBILE_DIGITS);
+    setValue(next);
+    onComplete?.(next.length === PH_MOBILE_DIGITS);
   }
 
   const short = value.length > 0 && value.length < PH_MOBILE_DIGITS;

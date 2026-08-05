@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateStaffContact, type ActionState } from "./actions";
 import {
   fieldClass,
@@ -23,6 +23,7 @@ export default function StaffContactForm({
     updateStaffContact,
     initial,
   );
+  const [phoneOk, setPhoneOk] = useState(contactNo.length === 10);
 
   return (
     <form
@@ -52,13 +53,17 @@ export default function StaffContactForm({
         name="contactNo"
         label="Mobile number"
         defaultValue={contactNo}
-        hint="Leave blank to remove it."
+        onComplete={setPhoneOk}
       />
 
       {state.error && <Notice>{state.error}</Notice>}
       {state.success && <Notice kind="success">{state.success}</Notice>}
 
-      <button type="submit" disabled={pending} className={`${buttonClass} w-full`}>
+      <button
+        type="submit"
+        disabled={pending || !phoneOk}
+        className={`${buttonClass} w-full`}
+      >
         {pending ? "Saving…" : "Save changes"}
       </button>
     </form>

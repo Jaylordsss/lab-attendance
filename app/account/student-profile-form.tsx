@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateStudentProfile, type ActionState } from "./actions";
 import {
   fieldClass,
@@ -33,6 +33,20 @@ export default function StudentProfileForm({
     updateStudentProfile,
     initial,
   );
+
+  // Mirrored in the server action, which is what actually enforces it. This
+  // only spares the round trip.
+  const [filled, setFilled] = useState({
+    contactNo: contactNo.length === 10,
+    guardianName: guardianName.trim().length >= 2,
+    guardianNo: guardianNo.length === 10,
+    address: address.trim().length >= 8,
+  });
+
+  const complete = Object.values(filled).every(Boolean);
+
+  const mark = (key: keyof typeof filled, ok: boolean) =>
+    setFilled((f) => (f[key] === ok ? f : { ...f, [key]: ok }));
 
   return (
     <form
@@ -78,6 +92,7 @@ export default function StudentProfileForm({
         name="contactNo"
         label="Your mobile"
         defaultValue={contactNo}
+        onComplete={(ok) => mark("contactNo", ok)}
       />
 
       <div className="pt-2 border-t border-[#E2E8ED]">
@@ -85,7 +100,9 @@ export default function StudentProfileForm({
         <input
           id="guardianName"
           name="guardianName"
+          required
           defaultValue={guardianName}
+          onChange={(e) => mark("guardianName", e.target.value.trim().length >= 2)}
           className={fieldClass}
         />
       </div>
@@ -95,6 +112,7 @@ export default function StudentProfileForm({
         name="guardianNo"
         label="Guardian mobile"
         defaultValue={guardianNo}
+        onComplete={(ok) => mark("guardianNo", ok)}
       />
 
       <div>
@@ -102,8 +120,11 @@ export default function StudentProfileForm({
         <input
           id="address"
           name="address"
+          required
           defaultValue={address}
-          className={fieldClass}
+          placeholder="Street, barangay, city, province"
+          onChange={(e) => mark("address", e.target.value.trim().length >= 8)}
+          className={`${fieldClass} placeholder:text-[#B4BFC8]`}
         />
         <p className="mt-2 text-xs text-[#5A6B7A] leading-relaxed">
           Your address and guardian details are encrypted. Only administrators
@@ -114,7 +135,18 @@ export default function StudentProfileForm({
       {state.error && <Notice>{state.error}</Notice>}
       {state.success && <Notice kind="success">{state.success}</Notice>}
 
-      <button type="submit" disabled={pending} className={`${buttonClass} w-full`}>
+      {!complete && (
+        <p className="text-xs text-[#5A6B7A] leading-relaxed">
+          Fill in every field before saving. The school needs a working
+          guardian contact for every student.
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={pending || !complete}
+        className={`${buttonClass} w-full`}
+      >
         {pending ? "Saving…" : "Save changes"}
       </button>
     </form>

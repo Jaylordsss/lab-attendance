@@ -115,12 +115,12 @@ export async function updateStaffContact(
   if (!email.includes("@") || isSyntheticStudentEmail(email)) {
     return fail("Enter a real email address.");
   }
-
-  let contactNo: string | null = null;
-  if (contactRaw) {
-    contactNo = normalizePhPhone(contactRaw);
-    if (!contactNo) return fail(phoneError());
+  if (!contactRaw) {
+    return fail("Enter your mobile number.");
   }
+
+  const contactNo = normalizePhPhone(contactRaw);
+  if (!contactNo) return fail(phoneError());
 
   const service = getServiceClient();
 
@@ -169,16 +169,30 @@ export async function updateStudentProfile(
   const guardianName = String(formData.get("guardianName") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
 
-  let contactNo: string | null = null;
-  if (contactRaw) {
-    contactNo = normalizePhPhone(contactRaw);
-    if (!contactNo) return fail(phoneError("your"));
+  // All of it, or none of it. A half-filled record is worse than an empty
+  // one: the school believes it has a guardian contact until the day it needs
+  // to use it. Saving is refused rather than silently storing blanks.
+  const missing: string[] = [];
+  if (!contactRaw) missing.push("your mobile");
+  if (!guardianName) missing.push("guardian name");
+  if (!guardianRaw) missing.push("guardian mobile");
+  if (!address) missing.push("address");
+
+  if (missing.length > 0) {
+    return fail(`Still needed: ${listOf(missing)}.`);
   }
 
-  let guardianNo: string | null = null;
-  if (guardianRaw) {
-    guardianNo = normalizePhPhone(guardianRaw);
-    if (!guardianNo) return fail(phoneError("your guardian's"));
+  const contactNo = normalizePhPhone(contactRaw);
+  if (!contactNo) return fail(phoneError("your"));
+
+  const guardianNo = normalizePhPhone(guardianRaw);
+  if (!guardianNo) return fail(phoneError("your guardian's"));
+
+  if (guardianName.length < 2) {
+    return fail("Enter your guardian's full name.");
+  }
+  if (address.length < 8) {
+    return fail("Enter your complete address, including the city.");
   }
 
   const supabase = await createClient();
@@ -226,6 +240,12 @@ export async function updateStudentProfile(
 }
 
 /* ------------------------------------------------------------------ */
+
+/** "a, b and c" — reads better in an error than a bare comma list. */
+function listOf(items: string[]): string {
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
 
 function phoneError(whose = ""): string {
   const owner = whose ? `${whose} ` : "";
