@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
     studentId?: string;
     sessionId?: string;
     roomId?: string;
+    distanceM?: number;
   } = {};
 
   const deny = async (reason: string, code = 403) => {
@@ -112,19 +113,32 @@ export async function POST(req: NextRequest) {
     ctx.roomId = room.id as string;
     if (!verifySignature(parsed, room.qr_secret)) return deny("invalid_code");
 
-    // Static codes are permanently photographable, so GPS is mandatory here.
-    if (!withinGeofence(body.lat, body.lng, room)) return deny("out_of_range");
-
+    // Resolve the open session first, so an out-of-range attempt is still
+    // attached to the class the student was trying to join. Checking distance
+    // before this would leave the most interesting rejections orphaned.
     const { data: open } = await getAdmin()
       .from("class_sessions")
       .select("id")
       .eq("room_id", room.id)
       .eq("status", "open")
       .maybeSingle();
+
+    if (open) {
+      sessionId = open.id;
+      ctx.sessionId = open.id as string;
+    }
+
+    // Static codes are permanently photographable, so GPS is mandatory here.
+    const distance = distanceFrom(body.lat, body.lng, room);
+    ctx.distanceM = distance === null ? undefined : Math.round(distance);
+
+    if (distance === null || distance > room.geofence_m) {
+      return deny("out_of_range");
+    }
+
     if (!open) return deny("no_open_session");
 
     sessionId = open.id;
-    ctx.sessionId = open.id as string;
     method = "static";
   }
 
@@ -218,13 +232,19 @@ function isLate(startTime?: string, graceMinutes = 15): boolean {
   return now > cutoff;
 }
 
-function withinGeofence(
+/**
+ * Metres between the phone and the laboratory, or null when either position
+ * is unknown. Returning the distance rather than a yes/no lets the rejection
+ * record how far away the student actually was.
+ */
+function distanceFrom(
   lat: number | undefined,
   lng: number | undefined,
-  room: { lat: number | null; lng: number | null; geofence_m: number },
-): boolean {
-  if (room.lat == null || room.lng == null) return false;
-  if (lat == null || lng == null) return false;
+  room: { lat: number | null; lng: number | null },
+): number | null {
+  if (room.lat == null || room.lng == null) return null;
+  if (lat == null || lng == null) return null;
+
   const R = 6371000;
   const toRad = (d: number) => (d * Math.PI) / 180;
   const dLat = toRad(lat - room.lat);
@@ -232,12 +252,18 @@ function withinGeofence(
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(room.lat)) * Math.cos(toRad(lat)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) <= room.geofence_m;
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /** Records a scan that did not become attendance. */
 async function logRejection(
-  ctx: { studentId?: string; sessionId?: string; roomId?: string },
+  ctx: {
+    studentId?: string;
+    sessionId?: string;
+    roomId?: string;
+    distanceM?: number;
+  },
   reason: string,
   body: Body | null,
 ) {
@@ -246,6 +272,7 @@ async function logRejection(
       class_session_id: ctx.sessionId ?? null,
       student_id: ctx.studentId ?? null,
       room_id: ctx.roomId ?? null,
+      distance_m: ctx.distanceM ?? null,
       reason,
       device_id: body?.deviceId ?? null,
       lat: body?.lat ?? null,

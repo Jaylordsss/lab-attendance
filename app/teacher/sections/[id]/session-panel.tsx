@@ -17,18 +17,45 @@ type Rejection = {
   student_no: string;
   reason: string;
   at: string;
+  distance_m: number | null;
 };
 
 const REASON_LABEL: Record<string, string> = {
-  not_enrolled: "not in this class",
-  out_of_range: "too far away",
-  already_marked: "already marked in",
-  device_mismatch: "different phone",
-  no_open_session: "no class open",
-  invalid_code: "unrecognised code",
-  device_not_bound: "phone not registered",
-  unauthenticated: "not signed in",
+  not_enrolled: "Not enrolled in this class",
+  out_of_range: "Outside the laboratory",
+  already_marked: "Already marked in",
+  device_mismatch: "Scanned from a different phone",
+  no_open_session: "No class was open",
+  invalid_code: "Unrecognised code",
+  device_not_bound: "Phone not registered",
+  unauthenticated: "Not signed in",
+  server_error: "Something went wrong",
 };
+
+/** Reasons a teacher should look at, rather than shrug off. */
+const SUSPICIOUS = new Set([
+  "out_of_range",
+  "device_mismatch",
+  "not_enrolled",
+]);
+
+function describe(r: Rejection): string {
+  const label = REASON_LABEL[r.reason] ?? r.reason;
+  if (r.reason === "out_of_range" && r.distance_m != null) {
+    const d = r.distance_m;
+    const away = d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${d} m`;
+    return `${label} — ${away} away`;
+  }
+  return label;
+}
+
+function timeOf(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-PH", {
+    timeZone: "Asia/Manila",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function SessionPanel({
   sectionId,
@@ -166,26 +193,47 @@ export default function SessionPanel({
           </div>
 
           {rejections.length > 0 && (
-            <div className="mt-6 pt-5 border-t border-[#D3E3DE]">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-[#A8321F]">
-                Refused scans
-              </p>
-              <ul className="mt-2 space-y-1.5">
+            <div className="mt-6 rounded-lg border-2 border-[#A8321F] bg-[#FDF4F2] p-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-medium text-[#A8321F]">
+                  {rejections.length} refused{" "}
+                  {rejections.length === 1 ? "attempt" : "attempts"}
+                </p>
+                {rejections.some((r) => SUSPICIOUS.has(r.reason)) && (
+                  <p className="text-xs text-[#A8321F]">Worth checking</p>
+                )}
+              </div>
+
+              <ul className="mt-3 space-y-2">
                 {rejections.map((r, i) => (
-                  <li
-                    key={i}
-                    className="flex items-baseline justify-between gap-3 text-sm text-[#5A6B7A]"
-                  >
-                    <span>
-                      {r.full_name}{" "}
-                      <span className="font-mono text-xs">{r.student_no}</span>
-                    </span>
-                    <span className="text-xs" style={{ color: "#A8321F" }}>
-                      {REASON_LABEL[r.reason] ?? r.reason}
-                    </span>
+                  <li key={i} className="text-sm">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-[#16202B]">
+                        {r.full_name}{" "}
+                        <span className="font-mono text-xs text-[#5A6B7A]">
+                          {r.student_no}
+                        </span>
+                      </span>
+                      <span className="font-mono text-xs text-[#5A6B7A] shrink-0">
+                        {timeOf(r.at)}
+                      </span>
+                    </div>
+                    <p
+                      className="text-xs mt-0.5"
+                      style={{
+                        color: SUSPICIOUS.has(r.reason) ? "#A8321F" : "#5A6B7A",
+                      }}
+                    >
+                      {describe(r)}
+                    </p>
                   </li>
                 ))}
               </ul>
+
+              <p className="mt-3 text-xs text-[#5A6B7A] leading-relaxed">
+                These scans were not recorded as attendance. They appear in the
+                PDF too.
+              </p>
             </div>
           )}
 
