@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { enrolStudent, type EnrolState } from "./actions";
 import { fieldClass, labelClass, buttonClass, Notice } from "@/components/admin-ui";
+import PhoneField from "@/app/account/phone-field";
 
 const initial: EnrolState = { error: null, created: null, info: null };
 
@@ -94,17 +95,11 @@ export default function EnrolForm({ sectionId }: { sectionId: string }) {
             <input id="guardianName" name="guardianName" className={fieldClass} />
           </div>
 
-          <div>
-            <label htmlFor="guardianNo" className={labelClass}>Guardian contact</label>
-            <input
-              id="guardianNo"
-              name="guardianNo"
-              type="tel"
-              inputMode="tel"
-              placeholder="09XX XXX XXXX"
-              className={`${fieldClass} placeholder:text-[#B4BFC8]`}
-            />
-          </div>
+          <PhoneField
+            id="guardianNo"
+            name="guardianNo"
+            label="Guardian contact"
+          />
 
           <p className="text-xs text-[#5A6B7A] leading-relaxed">
             Address and guardian details are encrypted and visible only to

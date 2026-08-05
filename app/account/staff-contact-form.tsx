@@ -8,6 +8,7 @@ import {
   buttonClass,
   Notice,
 } from "@/components/admin-ui";
+import PhoneField from "./phone-field";
 
 const initial: ActionState = { error: null, success: null };
 
@@ -46,21 +47,13 @@ export default function StaffContactForm({
         </p>
       </div>
 
-      <div>
-        <label htmlFor="contactNo" className={labelClass}>Mobile number</label>
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-sm text-[#5A6B7A] shrink-0">+63</span>
-          <input
-            id="contactNo"
-            name="contactNo"
-            type="tel"
-            inputMode="numeric"
-            defaultValue={contactNo}
-            placeholder="917 123 4567"
-            className={`${fieldClass} font-mono placeholder:text-[#B4BFC8]`}
-          />
-        </div>
-      </div>
+      <PhoneField
+        id="contactNo"
+        name="contactNo"
+        label="Mobile number"
+        defaultValue={contactNo}
+        hint="Leave blank to remove it."
+      />
 
       {state.error && <Notice>{state.error}</Notice>}
       {state.success && <Notice kind="success">{state.success}</Notice>}

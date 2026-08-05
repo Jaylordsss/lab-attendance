@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getServiceClient } from "@/lib/supabase/admin";
 import { piiKey } from "@/lib/require-teacher";
-import { formatPhPhone, isSyntheticStudentEmail, HOME_FOR_ROLE } from "@/lib/auth";
+import { toNationalDigits, isSyntheticStudentEmail, HOME_FOR_ROLE } from "@/lib/auth";
 import PasswordForm from "./password-form";
 import StaffContactForm from "./staff-contact-form";
 import StudentProfileForm from "./student-profile-form";
@@ -36,9 +36,9 @@ export default async function AccountPage() {
     body = (
       <StudentProfileForm
         email={email}
-        contactNo={p.contact_no ? formatPhPhone(p.contact_no) : ""}
+        contactNo={toNationalDigits(p.contact_no)}
         guardianName={p.guardian_name ?? ""}
-        guardianNo={p.guardian_phone ? formatPhPhone(p.guardian_phone) : ""}
+        guardianNo={toNationalDigits(p.guardian_phone)}
         address={p.address ?? ""}
         studentNo={p.student_no ?? ""}
         birthdate={p.birthdate ?? ""}
@@ -55,9 +55,7 @@ export default async function AccountPage() {
     body = (
       <StaffContactForm
         email={email}
-        contactNo={
-          staff?.contact_no ? formatPhPhone(staff.contact_no as string) : ""
-        }
+        contactNo={toNationalDigits(staff?.contact_no as string | null)}
       />
     );
   }

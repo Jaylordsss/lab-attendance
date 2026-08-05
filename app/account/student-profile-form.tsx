@@ -8,6 +8,7 @@ import {
   buttonClass,
   Notice,
 } from "@/components/admin-ui";
+import PhoneField from "./phone-field";
 
 const initial: ActionState = { error: null, success: null };
 
@@ -72,21 +73,12 @@ export default function StudentProfileForm({
         </p>
       </div>
 
-      <div>
-        <label htmlFor="contactNo" className={labelClass}>Your mobile</label>
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-sm text-[#5A6B7A] shrink-0">+63</span>
-          <input
-            id="contactNo"
-            name="contactNo"
-            type="tel"
-            inputMode="numeric"
-            defaultValue={contactNo}
-            placeholder="917 123 4567"
-            className={`${fieldClass} font-mono placeholder:text-[#B4BFC8]`}
-          />
-        </div>
-      </div>
+      <PhoneField
+        id="contactNo"
+        name="contactNo"
+        label="Your mobile"
+        defaultValue={contactNo}
+      />
 
       <div className="pt-2 border-t border-[#E2E8ED]">
         <label htmlFor="guardianName" className={labelClass}>Guardian name</label>
@@ -98,21 +90,12 @@ export default function StudentProfileForm({
         />
       </div>
 
-      <div>
-        <label htmlFor="guardianNo" className={labelClass}>Guardian mobile</label>
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-sm text-[#5A6B7A] shrink-0">+63</span>
-          <input
-            id="guardianNo"
-            name="guardianNo"
-            type="tel"
-            inputMode="numeric"
-            defaultValue={guardianNo}
-            placeholder="917 123 4567"
-            className={`${fieldClass} font-mono placeholder:text-[#B4BFC8]`}
-          />
-        </div>
-      </div>
+      <PhoneField
+        id="guardianNo"
+        name="guardianNo"
+        label="Guardian mobile"
+        defaultValue={guardianNo}
+      />
 
       <div>
         <label htmlFor="address" className={labelClass}>Address</label>

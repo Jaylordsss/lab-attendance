@@ -102,12 +102,36 @@ export function isValidPhPhone(raw: string): boolean {
   return normalizePhPhone(raw) !== null;
 }
 
-/** +639171234567 → 0917 123 4567, for display. */
+/** +639171234567 → 0917 123 4567. For display where there is no +63 prefix. */
 export function formatPhPhone(stored: string): string {
-  const m = /^\+63(9\d{2})(\d{3})(\d{4})$/.exec(stored);
-  if (!m) return stored;
-  return `0${m[1]} ${m[2]} ${m[3]}`;
+  const national = toNationalDigits(stored);
+  if (!national) return stored;
+  return `0${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6)}`;
 }
+
+/**
+ * +639171234567 → 9171234567.
+ *
+ * For inputs that already show a fixed +63 prefix. Keeping the leading zero
+ * there renders as "+63 0917…", which is not a real number in any format and
+ * invites people to add or drop a digit to make it look right.
+ *
+ * Falls back to salvaging whatever digits it can, so a number stored before
+ * normalisation existed still appears in the field rather than vanishing.
+ */
+export function toNationalDigits(stored: string | null | undefined): string {
+  if (!stored) return "";
+
+  const normalized = normalizePhPhone(stored);
+  if (normalized) return normalized.slice(3);
+
+  const digits = stored.replace(/\D/g, "");
+  const from9 = digits.indexOf("9");
+  return from9 === -1 ? "" : digits.slice(from9, from9 + 10);
+}
+
+/** Subscriber number length: 9 followed by nine more digits. */
+export const PH_MOBILE_DIGITS = 10;
 
 /* Departments live in the `departments` table, managed by the admin. There is
  * deliberately no list here — every school names them differently, and a list
