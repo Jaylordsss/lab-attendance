@@ -72,8 +72,14 @@ export default function SessionPanel({
     );
   }
 
-  const present = attendees.filter((a) => a.status === "present").length;
-  const late = attendees.filter((a) => a.status === "late").length;
+  // Absent rows are written by close_session, not by a scan. They belong in
+  // the report, not in a live view of who has walked in.
+  const scannedIn = attendees.filter(
+    (a) => a.status === "present" || a.status === "late",
+  );
+  const present = scannedIn.filter((a) => a.status === "present").length;
+  const late = scannedIn.filter((a) => a.status === "late").length;
+  const notYetIn = Math.max(0, enrolledCount - scannedIn.length);
 
   return (
     <div
@@ -151,7 +157,7 @@ export default function SessionPanel({
             </div>
             <div>
               <p className="font-mono text-3xl leading-none text-[#5A6B7A]">
-                {enrolledCount - attendees.length}
+                {notYetIn}
               </p>
               <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-[#5A6B7A]">
                 Not yet in
@@ -183,9 +189,9 @@ export default function SessionPanel({
             </div>
           )}
 
-          {attendees.length > 0 && (
+          {scannedIn.length > 0 && (
             <ul className="mt-6 space-y-2">
-              {attendees.map((a) => (
+              {scannedIn.map((a) => (
                 <li
                   key={a.student_no}
                   className="flex items-baseline justify-between gap-3 text-sm"

@@ -50,10 +50,24 @@ export async function startSession(formData: FormData) {
 
   if (existing) {
     if (existing.status === "closed") {
+      // Closing the class swept every no-show into an absent row. Reopening
+      // has to clear those, or the unique constraint on
+      // (class_session_id, student_id) rejects the student's scan as a
+      // duplicate and they can never check in.
+      //
+      // Only auto_absent rows go. A manual override or a real scan is a
+      // deliberate record and must survive.
+      await supabase
+        .from("attendance")
+        .delete()
+        .eq("class_session_id", existing.id)
+        .eq("method", "auto_absent");
+
       await supabase
         .from("class_sessions")
         .update({ status: "open", closed_at: null })
         .eq("id", existing.id);
+
       await audit(teacher.id, "session_reopened", existing.id as string);
     }
   } else {
