@@ -2,7 +2,12 @@
 
 import { useActionState } from "react";
 import { changePassword, type PasswordState } from "./actions";
-import { fieldClass, labelClass, buttonClass, Notice } from "@/components/admin-ui";
+import {
+  fieldClass,
+  labelClass,
+  buttonClass,
+  Notice,
+} from "@/components/admin-ui";
 
 const initial: PasswordState = { error: null };
 
@@ -14,6 +19,8 @@ export default function PasswordForm() {
       action={formAction}
       className="bg-white border border-[#D8DFE5] rounded-lg p-6 space-y-5"
     >
+      <h2 className="text-sm font-medium">Change your password</h2>
+
       <div>
         <label htmlFor="password" className={labelClass}>New password</label>
         <input

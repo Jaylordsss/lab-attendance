@@ -19,14 +19,22 @@ export default async function TeacherLayout({
             </p>
             <p className="text-sm font-medium">{user.fullName}</p>
           </Link>
-          <form action={signOut}>
-            <button
-              type="submit"
+          <div className="flex items-baseline gap-5">
+            <Link
+              href="/account"
               className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
             >
-              Sign out
-            </button>
-          </form>
+              Account
+            </Link>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </div>
       <main className="mx-auto max-w-4xl px-6 py-10">{children}</main>
