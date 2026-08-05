@@ -42,11 +42,6 @@ export function identifierToEmail(identifier: string): string {
   return value.includes("@") ? value.toLowerCase() : studentNoToEmail(value);
 }
 
-/**
- * Format guard for the admin CSV importer. Adjust the pattern to match your
- * school's actual format — catching a malformed number here is much cheaper
- * than discovering an orphaned account three weeks into the term.
- */
 export const STUDENT_NO_PATTERN = /^[0-9]{4}-[0-9]{5}$/;
 
 export function isValidStudentNo(raw: string): boolean {
@@ -64,13 +59,54 @@ export function normalizeFacultyId(raw: string): string {
 
 /**
  * Deliberately permissive — schools number their faculty in wildly different
- * ways and rejecting a valid ID is worse than accepting an odd one. Tighten
- * this once you know the real format.
+ * ways and rejecting a valid ID is worse than accepting an odd one.
  */
 export const FACULTY_ID_PATTERN = /^[A-Z0-9-]{3,20}$/;
 
 export function isValidFacultyId(raw: string): boolean {
   return FACULTY_ID_PATTERN.test(normalizeFacultyId(raw));
+}
+
+/* ------------------------------------------------------------------ *
+ * Philippine mobile numbers
+ * ------------------------------------------------------------------ */
+
+/**
+ * Stored canonically as +639XXXXXXXXX.
+ *
+ * People write the same number four ways — 0917…, +63917…, 63917…, or with
+ * spaces and dashes. Normalising on the way in means a search for a guardian's
+ * number finds them however it was typed, and an SMS gateway can be pointed at
+ * the column later without a migration.
+ *
+ * Philippine mobile numbers are always 9 followed by nine more digits.
+ */
+export function normalizePhPhone(raw: string): string | null {
+  const digits = raw.replace(/[^\d+]/g, "");
+  if (!digits) return null;
+
+  let local: string;
+
+  if (digits.startsWith("+63")) local = digits.slice(3);
+  else if (digits.startsWith("63")) local = digits.slice(2);
+  else if (digits.startsWith("0")) local = digits.slice(1);
+  else local = digits;
+
+  // A valid mobile subscriber number is 9 plus nine digits.
+  if (!/^9\d{9}$/.test(local)) return null;
+
+  return `+63${local}`;
+}
+
+export function isValidPhPhone(raw: string): boolean {
+  return normalizePhPhone(raw) !== null;
+}
+
+/** +639171234567 → 0917 123 4567, for display. */
+export function formatPhPhone(stored: string): string {
+  const m = /^\+63(9\d{2})(\d{3})(\d{4})$/.exec(stored);
+  if (!m) return stored;
+  return `0${m[1]} ${m[2]} ${m[3]}`;
 }
 
 /** Suggestions only. The field stays free text so nothing valid is blocked. */

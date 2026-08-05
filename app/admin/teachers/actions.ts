@@ -4,14 +4,16 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getServiceClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/require-admin";
-import { normalizeFacultyId, isValidFacultyId } from "@/lib/auth";
+import {
+  normalizeFacultyId,
+  isValidFacultyId,
+  normalizePhPhone,
+} from "@/lib/auth";
 
 export type TeacherState = {
   error: string | null;
   created: { name: string; email: string; password: string } | null;
 };
-
-const MIN_PASSWORD = 8;
 
 export async function createTeacher(
   _prev: TeacherState,
@@ -23,11 +25,7 @@ export async function createTeacher(
   const facultyId = normalizeFacultyId(str(formData, "facultyId"));
   const department = str(formData, "department");
   const email = str(formData, "email").toLowerCase();
-  const contactNo = str(formData, "contactNo");
-
-  // Admin may set the password, or leave it blank for a generated one.
-  const chosen = String(formData.get("password") ?? "");
-  const password = chosen || randomBytes(9).toString("base64url");
+  const contactRaw = str(formData, "contactNo");
 
   if (!fullName || !facultyId || !department || !email) {
     return fail("Fill in name, faculty ID, department and email.");
@@ -38,9 +36,23 @@ export async function createTeacher(
   if (!email.includes("@") || email.endsWith("@students.invalid")) {
     return fail("Use a real email address the teacher can receive mail at.");
   }
-  if (chosen && chosen.length < MIN_PASSWORD) {
-    return fail(`A password you set must be at least ${MIN_PASSWORD} characters.`);
+
+  // Optional, but if given it must be a real Philippine mobile number.
+  let contactNo: string | null = null;
+  if (contactRaw) {
+    contactNo = normalizePhPhone(contactRaw);
+    if (!contactNo) {
+      return fail(
+        "Enter a Philippine mobile number, like 0917 123 4567 or +63 917 123 4567.",
+      );
+    }
   }
+
+  // Always generated, never chosen by the admin. A password someone else
+  // picked tends to be reused across accounts, and it means the admin knows a
+  // credential that outlives their need for it. The teacher replaces it on
+  // first sign-in.
+  const password = randomBytes(9).toString("base64url");
 
   const supabase = getServiceClient();
 
@@ -61,7 +73,6 @@ export async function createTeacher(
     id: userId,
     role: "teacher",
     full_name: fullName,
-    // Flagged until they choose their own. The app prompts them at sign-in.
     must_change_password: true,
   });
 
@@ -74,7 +85,7 @@ export async function createTeacher(
     user_id: userId,
     faculty_id: facultyId,
     department,
-    contact_no: contactNo || null,
+    contact_no: contactNo,
   });
 
   if (staffErr) {
@@ -90,34 +101,12 @@ export async function createTeacher(
     actor_id: admin.id,
     action: "teacher_created",
     target: userId,
-    detail: { faculty_id: facultyId, department, password_set_by_admin: Boolean(chosen) },
+    detail: { faculty_id: facultyId, department },
   });
 
   revalidatePath("/admin/teachers");
   revalidatePath("/admin/users");
   return { error: null, created: { name: fullName, email, password } };
-}
-
-/** Issues a new temporary password. Used when someone is locked out. */
-export async function resetPassword(formData: FormData): Promise<void> {
-  const admin = await requireAdmin();
-  const userId = String(formData.get("userId"));
-  const newPassword = randomBytes(9).toString("base64url");
-
-  const supabase = getServiceClient();
-  await supabase.auth.admin.updateUserById(userId, { password: newPassword });
-  await supabase
-    .from("profiles")
-    .update({ must_change_password: true })
-    .eq("id", userId);
-
-  await supabase.from("audit_log").insert({
-    actor_id: admin.id,
-    action: "password_reset",
-    target: userId,
-  });
-
-  revalidatePath("/admin/users");
 }
 
 function fail(error: string): TeacherState {

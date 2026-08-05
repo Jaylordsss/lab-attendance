@@ -1,23 +1,29 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { createTeacher, type TeacherState } from "./actions";
 import { DEPARTMENTS } from "@/lib/auth";
-import { fieldClass, labelClass, buttonClass, Notice } from "@/components/admin-ui";
+import {
+  fieldClass,
+  labelClass,
+  buttonClass,
+  selectClass,
+  selectChevron,
+  Notice,
+} from "@/components/admin-ui";
 
 const initial: TeacherState = { error: null, created: null };
 
 export default function TeacherForm() {
   const [state, formAction, pending] = useActionState(createTeacher, initial);
-  const [setOwn, setSetOwn] = useState(false);
 
   if (state.created) {
     return (
       <div className="space-y-4">
         <h2 className="text-sm font-medium">{state.created.name} added</h2>
         <p className="text-sm text-[#5A6B7A] leading-relaxed">
-          Give them these details. They'll be asked to choose their own password
-          when they sign in.
+          Give them these details. The password is shown once and cannot be
+          recovered — they'll be asked to choose their own when they sign in.
         </p>
         <dl className="text-sm space-y-3 border-l-2 border-[#0B6E5F] pl-4">
           <div>
@@ -25,8 +31,10 @@ export default function TeacherForm() {
             <dd className="font-mono break-all">{state.created.email}</dd>
           </div>
           <div>
-            <dt className={labelClass}>Password</dt>
-            <dd className="font-mono text-lg break-all">{state.created.password}</dd>
+            <dt className={labelClass}>Temporary password</dt>
+            <dd className="font-mono text-lg break-all">
+              {state.created.password}
+            </dd>
           </div>
         </dl>
         <button
@@ -64,60 +72,56 @@ export default function TeacherForm() {
 
       <div>
         <label htmlFor="department" className={labelClass}>Department</label>
-        <input id="department" name="department" required list="departments" className={fieldClass} />
-        <datalist id="departments">
-          {DEPARTMENTS.map((d) => <option key={d} value={d} />)}
-        </datalist>
+        <select
+          id="department"
+          name="department"
+          required
+          defaultValue=""
+          className={selectClass}
+          style={selectChevron}
+        >
+          <option value="" disabled>Choose department</option>
+          {DEPARTMENTS.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
       </div>
 
       <div>
         <label htmlFor="email" className={labelClass}>Email</label>
-        <input id="email" name="email" type="email" required className={fieldClass} />
-      </div>
-
-      <div>
-        <label htmlFor="contactNo" className={labelClass}>Contact number</label>
         <input
-          id="contactNo"
-          name="contactNo"
-          type="tel"
-          inputMode="tel"
-          placeholder="09XX XXX XXXX"
-          className={`${fieldClass} placeholder:text-[#B4BFC8]`}
+          id="email"
+          name="email"
+          type="email"
+          required
+          className={fieldClass}
         />
       </div>
 
-      <div className="border-t border-[#E2E8ED] pt-5">
-        {!setOwn ? (
-          <>
-            <p className="text-sm text-[#5A6B7A]">
-              A password will be generated and shown once.
-            </p>
-            <button
-              type="button"
-              onClick={() => setSetOwn(true)}
-              className="mt-2 text-sm underline underline-offset-4 hover:text-[#0B6E5F]"
-            >
-              Set the password myself
-            </button>
-          </>
-        ) : (
-          <div>
-            <label htmlFor="password" className={labelClass}>Password</label>
-            <input
-              id="password"
-              name="password"
-              type="text"
-              minLength={8}
-              autoComplete="off"
-              className={`${fieldClass} font-mono`}
-            />
-            <p className="mt-2 text-xs text-[#5A6B7A]">
-              At least 8 characters. Shown as plain text so you can read it out.
-            </p>
-          </div>
-        )}
+      <div>
+        <label htmlFor="contactNo" className={labelClass}>
+          Mobile number
+        </label>
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-sm text-[#5A6B7A] shrink-0">+63</span>
+          <input
+            id="contactNo"
+            name="contactNo"
+            type="tel"
+            inputMode="numeric"
+            placeholder="917 123 4567"
+            className={`${fieldClass} font-mono placeholder:text-[#B4BFC8]`}
+          />
+        </div>
+        <p className="mt-2 text-xs text-[#5A6B7A] leading-relaxed">
+          Philippine mobile only. 0917… and +63 917… both work.
+        </p>
       </div>
+
+      <p className="text-xs text-[#5A6B7A] leading-relaxed border-t border-[#E2E8ED] pt-5">
+        A password is generated automatically and shown once. The teacher
+        chooses their own the first time they sign in.
+      </p>
 
       {state.error && <Notice>{state.error}</Notice>}
 
