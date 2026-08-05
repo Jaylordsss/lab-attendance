@@ -83,31 +83,35 @@ export default async function SectionPage({
   let attendees: any[] = [];
   let rejections: any[] = [];
   if (session) {
-    const { data } = await service
+    const { data, error: attErr } = await service
       .from("attendance")
-      .select("status, scanned_at, students(student_no), profiles:student_id(full_name)")
+      .select("status, scanned_at, students(student_no, profiles(full_name))")
       .eq("class_session_id", session.id)
       .order("scanned_at", { ascending: false });
+
+    if (attErr) console.error("attendance query:", attErr.message);
 
     attendees = (data ?? []).map((a: any) => ({
       status: a.status,
       scanned_at: a.scanned_at,
       student_no: a.students?.student_no ?? "",
-      full_name: a.profiles?.full_name ?? "",
+      full_name: a.students?.profiles?.full_name ?? "",
     }));
 
-    const { data: rej } = await service
+    const { data: rej, error: rejErr } = await service
       .from("scan_rejections")
-      .select("reason, at, students(student_no), profiles:student_id(full_name)")
+      .select("reason, at, students(student_no, profiles(full_name))")
       .eq("class_session_id", session.id)
       .order("at", { ascending: false })
       .limit(20);
+
+    if (rejErr) console.error("rejections query:", rejErr.message);
 
     rejections = (rej ?? []).map((r: any) => ({
       reason: r.reason,
       at: r.at,
       student_no: r.students?.student_no ?? "—",
-      full_name: r.profiles?.full_name ?? "Unknown",
+      full_name: r.students?.profiles?.full_name ?? "Unknown",
     }));
   }
 
