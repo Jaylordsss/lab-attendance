@@ -92,7 +92,7 @@ export default function PasswordForm({
       >
         <input type="hidden" name="password" value={pending} />
 
-        <h2 className="text-sm font-medium">Enter the code</h2>
+        <h2 className="text-sm font-medium">Enter the code we sent</h2>
         {start.success && <Notice kind="success">{start.success}</Notice>}
 
         <div>
@@ -125,16 +125,31 @@ export default function PasswordForm({
           {confirming ? "Confirming…" : "Confirm and change password"}
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setAwaitingCode(false);
-            setPending("");
-          }}
-          className="text-xs text-[#5A6B7A] underline underline-offset-4"
-        >
-          Start again
-        </button>
+        <div className="flex items-baseline gap-4 pt-1">
+          <button
+            type="button"
+            onClick={() => setAwaitingCode(false)}
+            className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+          >
+            Send another code
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAwaitingCode(false);
+              setPending("");
+            }}
+            className="text-xs text-[#5A6B7A] underline underline-offset-4"
+          >
+            Cancel
+          </button>
+        </div>
+
+        <p className="text-xs text-[#5A6B7A] leading-relaxed">
+          Codes take a moment to arrive and can land in spam. Wait a minute
+          before asking for another — requesting too many locks the account out
+          of sending for a while.
+        </p>
       </form>
     );
   }
@@ -186,12 +201,16 @@ export default function PasswordForm({
         disabled={starting}
         className={`${buttonClass} w-full`}
       >
-        {starting ? "Sending code…" : "Continue"}
+        {starting ? "Sending code…" : "Send code to my email"}
       </button>
 
       <p className="text-xs text-[#5A6B7A] leading-relaxed">
-        We&rsquo;ll email you a code before the change takes effect. Forgotten
-        your password? Students ask their teacher; teachers ask the
+        Nothing changes yet. We check your current password, then email a code
+        that confirms the change.
+      </p>
+
+      <p className="text-xs text-[#5A6B7A] leading-relaxed border-t border-[#E2E8ED] pt-4">
+        Forgotten your password? Students ask their teacher; teachers ask the
         administrator.
       </p>
     </form>
