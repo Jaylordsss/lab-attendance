@@ -51,14 +51,14 @@ const fail = (error: string): ActionState => ({ error, success: null });
  */
 
 /**
- * Step one: prove the current password, then send a code.
+ * Changing a password.
  *
- * The new password is not written yet. Verifying the old one stops a
- * passer-by with an unlocked phone; the emailed code stops someone who has
- * learned the password but has no access to the inbox. Neither alone is
- * enough, which is the point of asking for both.
+ * The current password is the only check. An emailed code was tried and
+ * removed: it depends on a mail server, arrives late or in spam, and locks
+ * out precisely the students who have no inbox — while adding little, since
+ * knowing the current password is already the thing an attacker would lack.
  */
-export async function startPasswordChange(
+export async function changePassword(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -93,60 +93,22 @@ export async function startPasswordChange(
   if (checkErr) return fail("That current password is not right.");
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.reauthenticate();
-
-  if (error) {
-    console.error("reauthenticate:", error.message);
-    return fail(
-      error.message.toLowerCase().includes("rate")
-        ? "Too many codes requested. Wait a few minutes and try again."
-        : "Couldn't send the code. Check your email address is correct.",
-    );
-  }
-
-  return ok(`Code sent to ${maskEmail(email)}.`);
-}
-
-/** Step two: the code arrives, and only then is the password written. */
-export async function confirmPasswordChange(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-
-  const next = String(formData.get("password") ?? "");
-  const nonce = String(formData.get("nonce") ?? "").trim();
-  const inSetup = String(formData.get("setup") ?? "") === "1";
-
-  if (next.length < MIN_PASSWORD) {
-    return fail("Start again — the new password was lost.");
-  }
-  if (!nonce) return fail("Enter the code from your email.");
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password: next, nonce });
+  const { error } = await supabase.auth.updateUser({ password: next });
 
   if (error) {
     console.error("password change:", error.message);
-    return fail(
-      error.message.toLowerCase().includes("nonce")
-        ? "That code is wrong or has expired. Send a new one."
-        : "Couldn't change your password. Try again.",
-    );
+    return fail("Couldn't change your password. Try again.");
   }
 
   await finishPasswordChange(user.id);
-  redirect(inSetup ? "/account?complete=1&done=1" : HOME_FOR_ROLE[user.role]);
+  redirect(HOME_FOR_ROLE[user.role]);
 }
 
 /**
- * First-run setup, where there is no code step.
+ * First-run setup, where no current password is asked for.
  *
- * The password a new account holds was issued by someone else, and a student
- * on a synthetic @students.invalid address has no inbox a code could reach.
- * Requiring one here would lock out exactly the people who most need to get
- * in.
+ * The password a new account holds was issued by someone else, so retyping it
+ * proves nothing about who is sitting there.
  */
 export async function setInitialPassword(
   _prev: ActionState,
@@ -188,14 +150,6 @@ async function finishPasswordChange(userId: string) {
     action: "password_changed",
     target: userId,
   });
-}
-
-/** j****d@gmail.com — enough to recognise, not enough to harvest. */
-function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
-  if (!domain) return email;
-  if (local.length <= 2) return `${local[0]}***@${domain}`;
-  return `${local[0]}${"*".repeat(Math.min(local.length - 2, 5))}${local.at(-1)}@${domain}`;
 }
 
 /* ------------------------------------------------------------------ *

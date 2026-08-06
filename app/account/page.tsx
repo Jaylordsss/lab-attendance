@@ -31,9 +31,6 @@ export default async function AccountPage({
   const rawEmail = authUser.user?.email ?? "";
   const email = isSyntheticStudentEmail(rawEmail) ? "" : rawEmail;
 
-  // A code can only be sent to an inbox that exists.
-  const canUseCode = Boolean(email) && Boolean(authUser.user?.email_confirmed_at);
-
   const { data: profile } = await service
     .from("profiles")
     .select("must_change_password")
@@ -154,7 +151,7 @@ export default async function AccountPage({
             {!inSetup && (
               <>
                 {body}
-                <PasswordForm canUseCode={canUseCode} />
+                <PasswordForm />
               </>
             )}
           </div>
