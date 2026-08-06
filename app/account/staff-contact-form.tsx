@@ -2,13 +2,13 @@
 
 import { useActionState, useState } from "react";
 import { updateStaffContact, type ActionState } from "./actions";
+import PhoneField from "./phone-field";
 import {
   fieldClass,
   labelClass,
   buttonClass,
   Notice,
 } from "@/components/admin-ui";
-import PhoneField from "./phone-field";
 
 const initial: ActionState = { error: null, success: null };
 
@@ -23,14 +23,70 @@ export default function StaffContactForm({
     updateStaffContact,
     initial,
   );
-  const [phoneOk, setPhoneOk] = useState(contactNo.length === 10);
+
+  const [editing, setEditing] = useState(false);
+  const [values, setValues] = useState({ email, contactNo });
+
+  const dirty =
+    values.email.trim() !== email.trim() ||
+    values.contactNo !== contactNo;
+
+  const valid =
+    values.email.includes("@") && values.contactNo.length === 10;
+
+  if (!editing) {
+    return (
+      <div className="bg-white border border-[#D8DFE5] rounded-lg p-6">
+        <div className="flex items-baseline justify-between gap-4 mb-5">
+          <h2 className="text-sm font-medium">Contact details</h2>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+          >
+            Edit details
+          </button>
+        </div>
+
+        <dl className="space-y-4 text-sm">
+          <div>
+            <dt className={labelClass}>Email</dt>
+            <dd className="font-mono break-all">{email || "Not set"}</dd>
+          </div>
+          <div>
+            <dt className={labelClass}>Mobile number</dt>
+            <dd className="font-mono">
+              {contactNo ? `+63 ${contactNo}` : "—"}
+            </dd>
+          </div>
+        </dl>
+
+        {state.success && (
+          <div className="mt-5">
+            <Notice kind="success">{state.success}</Notice>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <form
       action={formAction}
       className="bg-white border border-[#D8DFE5] rounded-lg p-6 space-y-5"
     >
-      <h2 className="text-sm font-medium">Contact details</h2>
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="text-sm font-medium">Editing contact details</h2>
+        <button
+          type="button"
+          onClick={() => {
+            setValues({ email, contactNo });
+            setEditing(false);
+          }}
+          className="text-sm text-[#5A6B7A] underline underline-offset-4"
+        >
+          Cancel
+        </button>
+      </div>
 
       <div>
         <label htmlFor="email" className={labelClass}>Email</label>
@@ -39,7 +95,10 @@ export default function StaffContactForm({
           name="email"
           type="email"
           required
-          defaultValue={email}
+          value={values.email}
+          onChange={(e) =>
+            setValues((v) => ({ ...v, email: e.target.value }))
+          }
           autoComplete="email"
           className={fieldClass}
         />
@@ -53,19 +112,20 @@ export default function StaffContactForm({
         name="contactNo"
         label="Mobile number"
         defaultValue={contactNo}
-        onComplete={setPhoneOk}
+        onChangeValue={(v) => setValues((prev) => ({ ...prev, contactNo: v }))}
       />
 
       {state.error && <Notice>{state.error}</Notice>}
-      {state.success && <Notice kind="success">{state.success}</Notice>}
 
-      <button
-        type="submit"
-        disabled={pending || !phoneOk}
-        className={`${buttonClass} w-full`}
-      >
-        {pending ? "Saving…" : "Save changes"}
-      </button>
+      {dirty && (
+        <button
+          type="submit"
+          disabled={pending || !valid}
+          className={`${buttonClass} w-full`}
+        >
+          {pending ? "Saving…" : "Save changes"}
+        </button>
+      )}
     </form>
   );
 }

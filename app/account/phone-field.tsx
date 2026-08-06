@@ -19,6 +19,7 @@ export default function PhoneField({
   defaultValue = "",
   hint,
   onComplete,
+  onChangeValue,
 }: {
   id: string;
   name: string;
@@ -27,6 +28,8 @@ export default function PhoneField({
   hint?: string;
   /** Fires with true once ten digits are present, false whenever they are not. */
   onComplete?: (complete: boolean) => void;
+  /** Fires with the current digits, for forms tracking unsaved changes. */
+  onChangeValue?: (digits: string) => void;
 }) {
   const [value, setValue] = useState(defaultValue);
 
@@ -39,6 +42,7 @@ export default function PhoneField({
     const next = digits.slice(0, PH_MOBILE_DIGITS);
     setValue(next);
     onComplete?.(next.length === PH_MOBILE_DIGITS);
+    onChangeValue?.(next);
   }
 
   const short = value.length > 0 && value.length < PH_MOBILE_DIGITS;

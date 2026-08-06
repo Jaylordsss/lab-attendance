@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { signIn, type LoginState } from "./actions";
+import PasswordInput from "@/components/password-input";
 
 const initial: LoginState = { error: null };
 
@@ -57,19 +59,10 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-6">
-            <label
-              htmlFor="password"
-              className="block text-[11px] uppercase tracking-[0.14em] text-[#5A6B7A] mb-2"
-            >
-              Password
-            </label>
-            <input
+            <PasswordInput
               id="password"
-              name="password"
-              type="password"
-              required
+              label="Password"
               autoComplete="current-password"
-              className="w-full border-b-2 border-[#16202B] bg-transparent pb-1.5 outline-none focus:border-[#0B6E5F]"
             />
           </div>
 
@@ -92,8 +85,13 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-5 text-xs text-[#5A6B7A] leading-relaxed">
-          Forgot your password? Students ask their teacher; teachers ask the
-          administrator.
+          <Link
+            href="/forgot-password"
+            className="underline underline-offset-4 hover:text-[#0B6E5F]"
+          >
+            Forgotten your password?
+          </Link>{" "}
+          If your account has no email address yet, ask your teacher instead.
         </p>
       </div>
     </main>
