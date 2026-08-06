@@ -175,6 +175,55 @@ export async function enrolStudent(
   };
 }
 
+/**
+ * Empties a section's roster in one go.
+ *
+ * Needed at the start of a term, when last year's list is still attached and
+ * removing forty students one at a time is forty confirmations. Attendance
+ * history survives — an enrolment row is a statement about the present, not a
+ * record of what happened.
+ */
+export async function removeAllStudents(
+  _prev: EnrolState,
+  formData: FormData,
+): Promise<EnrolState> {
+  const teacher = await requireTeacher();
+  const sectionId = str(formData, "sectionId");
+  const confirmation = str(formData, "confirm");
+
+  if (!(await assertOwnsSection(sectionId, teacher.id))) {
+    return fail("That isn't one of your sections.");
+  }
+
+  // Typing the word is the guard. A button this destructive should not be
+  // reachable by a mis-tap, and a section emptied by accident cannot be
+  // undone from here.
+  if (confirmation.toUpperCase() !== "REMOVE ALL") {
+    return fail('Type REMOVE ALL exactly to confirm.');
+  }
+
+  const supabase = getServiceClient();
+
+  const { count } = await supabase
+    .from("enrollments")
+    .select("student_id", { count: "exact", head: true })
+    .eq("section_id", sectionId);
+
+  const { error } = await supabase
+    .from("enrollments")
+    .delete()
+    .eq("section_id", sectionId);
+
+  if (error) return fail("Couldn't empty the roster. Try again.");
+
+  await audit(teacher.id, "roster_cleared", sectionId, { removed: count ?? 0 });
+  revalidatePath(`/teacher/sections/${sectionId}`);
+
+  return ok(
+    `${count ?? 0} student${count === 1 ? "" : "s"} removed from this section.`,
+  );
+}
+
 export async function removeStudent(formData: FormData) {
   const teacher = await requireTeacher();
   const sectionId = String(formData.get("sectionId"));

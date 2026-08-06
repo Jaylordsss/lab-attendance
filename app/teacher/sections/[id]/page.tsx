@@ -9,7 +9,10 @@ import { makeStaticToken, tokenUrl } from "@/lib/qr-token";
 import { startWindow } from "@/lib/schedule";
 import EnrolForm from "./form";
 import SessionPanel from "./session-panel";
+import Link from "next/link";
 import MarkRow, { type RosterEntry } from "./mark-row";
+import ClearRoster from "./clear-roster";
+import StudentFixes from "./student-fixes";
 import { removeStudent } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -141,6 +144,15 @@ export default async function SectionPage({
 
   return (
     <>
+      <Link
+        href="/teacher"
+        className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+      >
+        All your sections
+      </Link>
+
+      <div className="mt-4" />
+
       <PageHeader
         eyebrow={`${s.subjects?.code} · ${DAY_NAMES[s.day_of_week]} ${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}`}
         title={s.name}
@@ -167,11 +179,14 @@ export default async function SectionPage({
 
       <div className="grid gap-8 md:grid-cols-[1fr_320px] md:items-start">
         <section>
-          <div className="flex items-baseline justify-between mb-3">
+          <div className="flex items-baseline justify-between gap-4 mb-3">
             <h2 className="text-sm font-medium">Roster</h2>
-            <span className="text-xs text-[#5A6B7A]">
-              {roster.length} {roster.length === 1 ? "student" : "students"}
-            </span>
+            <div className="flex items-baseline gap-4">
+              <span className="text-xs text-[#5A6B7A]">
+                {roster.length} {roster.length === 1 ? "student" : "students"}
+              </span>
+              <ClearRoster sectionId={id} count={roster.length} />
+            </div>
           </div>
 
           {session && sessionRoster.length > 0 ? (
@@ -219,20 +234,27 @@ export default async function SectionPage({
                         </span>
                       </Td>
                       <Td>
-                        <form action={removeStudent}>
-                          <input type="hidden" name="sectionId" value={id} />
-                          <input
-                            type="hidden"
-                            name="studentId"
-                            value={student.user_id}
+                        <div className="flex flex-col items-start">
+                          <StudentFixes
+                            sectionId={id}
+                            studentId={student.user_id}
+                            name={student.full_name}
                           />
-                          <button
-                            type="submit"
-                            className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F]"
-                          >
-                            Remove
-                          </button>
-                        </form>
+                          <form action={removeStudent} className="mt-1">
+                            <input type="hidden" name="sectionId" value={id} />
+                            <input
+                              type="hidden"
+                              name="studentId"
+                              value={student.user_id}
+                            />
+                            <button
+                              type="submit"
+                              className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F]"
+                            >
+                              Remove from section
+                            </button>
+                          </form>
+                        </div>
                       </Td>
                     </tr>
                   ))}
