@@ -3,6 +3,20 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * A session-less client used only to test a password. Signing in through the
+ * request's own client would replace the cookie the user is currently using,
+ * logging them out on a wrong guess.
+ */
+function createIsolatedClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+}
 import { getServiceClient } from "@/lib/supabase/admin";
 import { piiKey } from "@/lib/require-teacher";
 import {
@@ -22,34 +36,19 @@ const fail = (error: string): ActionState => ({ error, success: null });
  * ------------------------------------------------------------------ */
 
 /**
- * Sends a one-time code to the signed-in user's email.
+ * Verifying a password change.
  *
- * Supabase's reauthenticate() is the mechanism: it mails a nonce which
- * updateUser() then requires alongside the new password. That is what makes a
- * stolen unlocked phone insufficient to take over an account.
+ * An earlier version emailed a one-time code through Supabase's
+ * reauthenticate(). That relies on the built-in mailer, which is rate limited
+ * to a couple of messages an hour on the free tier and is documented as being
+ * for testing only — so the code frequently never arrived, and a student
+ * locked behind an email that never comes is worse off than one with no
+ * second factor at all.
  *
- * It needs a real inbox, so an account still on a synthetic
- * @students.invalid address cannot use it — those change their password
- * directly, which is no weaker than what they had before.
+ * Asking for the current password achieves the same thing: someone who picks
+ * up an unlocked phone still cannot change the password without knowing it.
+ * It needs no mail server, works offline, and is what most services do.
  */
-export async function sendPasswordCode(
-  _prev: ActionState,
-  _formData: FormData,
-): Promise<ActionState> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.reauthenticate();
-
-  if (error) {
-    return fail(
-      "Couldn't send the code. Check that your email address is correct and confirmed.",
-    );
-  }
-
-  return ok("Code sent. Check your email, including spam.");
-}
 
 export async function changePassword(
   _prev: ActionState,
@@ -58,42 +57,57 @@ export async function changePassword(
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const current = String(formData.get("currentPassword") ?? "");
   const next = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirmPassword") ?? "");
-  const nonce = String(formData.get("nonce") ?? "").trim();
-  const needsCode = String(formData.get("needsCode") ?? "") === "true";
+  const inSetup = String(formData.get("setup") ?? "") === "1";
 
   if (next.length < MIN_PASSWORD) {
     return fail(`Use at least ${MIN_PASSWORD} characters.`);
   }
   if (next !== confirm) return fail("The two passwords don't match.");
-  if (needsCode && !nonce) return fail("Enter the code sent to your email.");
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser(
-    needsCode ? { password: next, nonce } : { password: next },
-  );
-
-  if (error) {
-    return fail(
-      error.message.toLowerCase().includes("nonce")
-        ? "That code is wrong or has expired. Send a new one."
-        : "Couldn't change your password. Try again.",
-    );
+  if (next === current) {
+    return fail("Choose a password different from your current one.");
   }
 
   const service = getServiceClient();
+  const supabase = await createClient();
+
+  // Skipped during first-run setup: the password they hold was issued by
+  // someone else, and asking them to retype it proves nothing.
+  if (!inSetup) {
+    if (!current) return fail("Enter your current password.");
+
+    const { data: authUser } = await service.auth.admin.getUserById(user.id);
+    const email = authUser.user?.email;
+    if (!email) return fail("Couldn't verify your account. Try again.");
+
+    // A throwaway client, so a wrong password cannot disturb the session the
+    // user is currently signed in with.
+    const { error: checkErr } = await createIsolatedClient().auth
+      .signInWithPassword({ email, password: current });
+
+    if (checkErr) return fail("That current password is not right.");
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: next });
+
+  if (error) {
+    console.error("password change:", error.message);
+    return fail("Couldn't change your password. Try again.");
+  }
+
   await service
     .from("profiles")
     .update({ must_change_password: false })
     .eq("id", user.id);
+
   await service.from("audit_log").insert({
     actor_id: user.id,
     action: "password_changed",
     target: user.id,
   });
 
-  const inSetup = String(formData.get("setup") ?? "") === "1";
   redirect(inSetup ? "/account?complete=1&done=1" : HOME_FOR_ROLE[user.role]);
 }
 
@@ -130,10 +144,11 @@ export async function updateStaffContact(
     email_confirm: true,
   });
   if (authErr) {
+    console.error("staff email update:", authErr.message);
     return fail(
-      authErr.message.includes("already")
+      authErr.message.toLowerCase().includes("already")
         ? "That email is already used by another account."
-        : "Couldn't update your email.",
+        : `Couldn't update your email — ${authErr.message}`,
     );
   }
 
@@ -216,11 +231,21 @@ export async function updateStudentProfile(
       });
 
       if (error) {
-        return fail(
-          error.message.includes("already")
-            ? "That email is already used by another account."
-            : "Couldn't update your email.",
-        );
+        // Surface what Supabase actually said. A generic message here hides
+        // the difference between a taken address, a rejected domain and a
+        // misconfigured server — three problems with three different fixes.
+        console.error("student email update:", error.message);
+
+        const msg = error.message.toLowerCase();
+        if (msg.includes("already") || msg.includes("registered")) {
+          return fail("That email is already used by another account.");
+        }
+        if (msg.includes("invalid")) {
+          return fail(
+            "Supabase rejected that address. Check it is spelled correctly.",
+          );
+        }
+        return fail(`Couldn't update your email — ${error.message}`);
       }
     }
   }

@@ -31,9 +31,6 @@ export default async function AccountPage({
   const rawEmail = authUser.user?.email ?? "";
   const email = isSyntheticStudentEmail(rawEmail) ? "" : rawEmail;
 
-  // A one-time code can only be sent to an inbox that exists.
-  const canUseCode = Boolean(email) && Boolean(authUser.user?.email_confirmed_at);
-
   const { data: profile } = await service
     .from("profiles")
     .select("must_change_password")
@@ -147,14 +144,14 @@ export default async function AccountPage({
                   Your details are saved. Now choose a password only you know —
                   the one you were given was shared with your teacher.
                 </Notice>
-                <PasswordForm needsCode={false} inSetup />
+                <PasswordForm inSetup />
               </>
             )}
 
             {!inSetup && (
               <>
                 {body}
-                <PasswordForm needsCode={canUseCode} />
+                <PasswordForm />
               </>
             )}
           </div>
