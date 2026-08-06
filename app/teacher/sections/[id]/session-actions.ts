@@ -59,6 +59,12 @@ export async function startSession(formData: FormData) {
   const supabase = getServiceClient();
   const today = manilaToday();
 
+  // A class left open from an earlier period keeps the laboratory marked busy,
+  // and only one session may be open per room. Sweep before checking, so the
+  // usual case fixes itself rather than presenting the teacher with a refusal
+  // they cannot act on.
+  await supabase.rpc("close_stale_sessions");
+
   // One session per section per day. Reopening a closed one keeps the
   // attendance already recorded against it rather than starting a second.
   const { data: existing } = await supabase
