@@ -61,7 +61,7 @@ export default function ForgotForm() {
           <h2 className="text-sm font-medium">Enter the code</h2>
           <p className="mt-1 text-sm text-[#5A6B7A] leading-relaxed">
             {send.maskedEmail
-              ? `We sent a six-digit code to ${send.maskedEmail}.`
+              ? `We sent a code to ${send.maskedEmail}.`
               : "If that account has an email address, a code is on its way."}{" "}
             It can take a minute, and it may land in spam.
           </p>
@@ -69,7 +69,7 @@ export default function ForgotForm() {
 
         <div>
           <label htmlFor="token" className={labelClass}>
-            Six-digit code
+            Code from your email
           </label>
           <input
             id="token"
@@ -78,8 +78,8 @@ export default function ForgotForm() {
             inputMode="numeric"
             autoComplete="one-time-code"
             autoFocus
-            maxLength={6}
-            placeholder="123456"
+            maxLength={10}
+            placeholder="41054260"
             className={`${fieldClass} font-mono text-xl tracking-[0.3em] placeholder:tracking-normal placeholder:text-[#B4BFC8]`}
           />
         </div>
