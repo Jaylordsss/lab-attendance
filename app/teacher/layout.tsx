@@ -21,6 +21,12 @@ export default async function TeacherLayout({
           </Link>
           <div className="flex items-baseline gap-5">
             <Link
+              href="/teacher/students"
+              className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+            >
+              Student help
+            </Link>
+            <Link
               href="/account"
               className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
             >

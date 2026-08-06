@@ -10,7 +10,6 @@ import { startWindow } from "@/lib/schedule";
 import EnrolForm from "./form";
 import SessionPanel from "./session-panel";
 import MarkRow, { type RosterEntry } from "./mark-row";
-import StudentFixes from "./student-fixes";
 import { removeStudent } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -220,27 +219,20 @@ export default async function SectionPage({
                         </span>
                       </Td>
                       <Td>
-                        <div className="flex flex-col items-start">
-                          <StudentFixes
-                            sectionId={id}
-                            studentId={student.user_id}
-                            name={student.full_name}
+                        <form action={removeStudent}>
+                          <input type="hidden" name="sectionId" value={id} />
+                          <input
+                            type="hidden"
+                            name="studentId"
+                            value={student.user_id}
                           />
-                          <form action={removeStudent} className="mt-1">
-                            <input type="hidden" name="sectionId" value={id} />
-                            <input
-                              type="hidden"
-                              name="studentId"
-                              value={student.user_id}
-                            />
-                            <button
-                              type="submit"
-                              className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F]"
-                            >
-                              Remove from section
-                            </button>
-                          </form>
-                        </div>
+                          <button
+                            type="submit"
+                            className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F]"
+                          >
+                            Remove
+                          </button>
+                        </form>
                       </Td>
                     </tr>
                   ))}
