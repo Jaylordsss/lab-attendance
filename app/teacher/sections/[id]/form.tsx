@@ -10,6 +10,7 @@ import {
   selectChevron,
   Notice,
 } from "@/components/admin-ui";
+import Link from "next/link";
 import PhoneField from "@/app/account/phone-field";
 
 const initial: EnrolState = { error: null, created: null, info: null };
@@ -103,6 +104,7 @@ export default function EnrolForm({
             <select
               id="department"
               name="department"
+              required
               defaultValue=""
               className={selectClass}
               style={selectChevron}
@@ -119,6 +121,29 @@ export default function EnrolForm({
               ))}
             </select>
           </div>
+
+          <div>
+            <label htmlFor="email" className={labelClass}>Email address</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="student@gmail.com"
+              className={`${fieldClass} placeholder:text-[#B4BFC8]`}
+            />
+            <p className="mt-2 text-xs text-[#5A6B7A] leading-relaxed">
+              How they reset a forgotten password. They still sign in with
+              their student number.
+            </p>
+          </div>
+
+          <PhoneField
+            id="contactNo"
+            name="contactNo"
+            label="Student mobile"
+            hint="Their own number, not the guardian's."
+          />
 
           <div>
             <label htmlFor="address" className={labelClass}>Address</label>
@@ -149,6 +174,17 @@ export default function EnrolForm({
       <button type="submit" disabled={pending} className={`${buttonClass} w-full`}>
         {pending ? "Enrolling…" : "Enrol"}
       </button>
+
+      <p className="border-t border-[#E2E8ED] pt-5 text-xs text-[#5A6B7A] leading-relaxed">
+        Adding a whole class?{" "}
+        <Link
+          href={`/teacher/sections/${sectionId}/import`}
+          className="underline underline-offset-4 hover:text-[#0B6E5F]"
+        >
+          Import a roster
+        </Link>{" "}
+        from a spreadsheet instead.
+      </p>
     </form>
   );
 }

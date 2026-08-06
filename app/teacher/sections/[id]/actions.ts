@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getServiceClient } from "@/lib/supabase/admin";
 import { requireTeacher, piiKey } from "@/lib/require-teacher";
-import { normalizeStudentNo, studentNoToEmail } from "@/lib/auth";
+import { normalizeStudentNo, normalizePhPhone } from "@/lib/auth";
 
 export type EnrolState = {
   error: string | null;
@@ -70,29 +70,60 @@ export async function enrolStudent(
   const fullName = str(formData, "fullName");
   const birthdate = str(formData, "birthdate");
   const department = str(formData, "department");
+  const email = str(formData, "email").toLowerCase();
   const address = str(formData, "address");
   const guardianName = str(formData, "guardianName");
   const guardianNo = str(formData, "guardianNo");
+  const contactRaw = str(formData, "contactNo");
 
-  if (!fullName || !birthdate || !department || !guardianName || !guardianNo) {
-    return fail(
-      "That student number is new. Fill in name, birthday, department and guardian details to create the account.",
-    );
+  // Every field, because each one is load-bearing: the email is the only way
+  // a student recovers their own password, the mobile is what the school rings
+  // when something happens in a laboratory, and the department is what the
+  // headcounts are built from. A blank here becomes someone's problem months
+  // later, when it is far more expensive to fill in.
+  const missing: string[] = [];
+  if (!fullName) missing.push("full name");
+  if (!birthdate) missing.push("birthday");
+  if (!department) missing.push("department");
+  if (!email) missing.push("email address");
+  if (!contactRaw) missing.push("student mobile");
+  if (!address) missing.push("address");
+  if (!guardianName) missing.push("guardian name");
+  if (!guardianNo) missing.push("guardian mobile");
+
+  if (missing.length) {
+    return fail(`That student number is new. Still needed: ${listOf(missing)}.`);
   }
   if (Number.isNaN(Date.parse(birthdate))) {
     return fail("Enter a valid birthday.");
   }
 
+  if (!email.includes("@") || email.endsWith("@students.invalid")) {
+    return fail("Enter a real email address they can receive mail at.");
+  }
+
+  const contactNo = normalizePhPhone(contactRaw);
+  if (!contactNo) {
+    return fail("Enter the student's Philippine mobile number.");
+  }
+
   const tempPassword = randomBytes(6).toString("base64url");
 
+  // The student still signs in with their number — the login resolves the
+  // number to the account rather than deriving an address — but a real inbox
+  // means they can recover a forgotten password without finding a teacher.
   const { data: created, error: createErr } = await supabase.auth.admin.createUser({
-    email: studentNoToEmail(studentNo),
+    email,
     password: tempPassword,
     email_confirm: true,
   });
 
   if (createErr || !created.user) {
-    return fail("Couldn't create the account. That student number may be taken.");
+    return fail(
+      createErr?.message.toLowerCase().includes("already")
+        ? "That email is already used by another account."
+        : "Couldn't create the account. That student number may be taken.",
+    );
   }
 
   const userId = created.user.id;
@@ -113,6 +144,7 @@ export async function enrolStudent(
     p_student_no: studentNo,
     p_birthdate: birthdate,
     p_department: department,
+    p_contact_no: contactNo,
     p_address: address,
     p_guardian_name: guardianName,
     p_guardian_no: guardianNo,
@@ -173,6 +205,12 @@ async function audit(
   await getServiceClient()
     .from("audit_log")
     .insert({ actor_id: actorId, action, target, detail });
+}
+
+/** "a, b and c" — reads better in an error than a bare comma list. */
+function listOf(items: string[]): string {
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
 function str(form: FormData, key: string): string {
