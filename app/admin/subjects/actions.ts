@@ -76,11 +76,14 @@ export async function updateSubject(
   return ok("Saved.");
 }
 
-export async function deleteSubject(formData: FormData): Promise<void> {
+export async function deleteSubject(
+  _prev: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const code = String(formData.get("code") ?? "");
-  if (!id) return;
+  if (!id) return { error: "Missing subject." };
 
   const supabase = getServiceClient();
 
@@ -91,11 +94,19 @@ export async function deleteSubject(formData: FormData): Promise<void> {
     .select("id", { count: "exact", head: true })
     .eq("subject_id", id);
 
-  if ((count ?? 0) > 0) return;
+  if ((count ?? 0) > 0) {
+    return {
+      error: `${count} section${count === 1 ? "" : "s"} still use ${code}. Delete those first.`,
+    };
+  }
 
-  await supabase.from("subjects").delete().eq("id", id);
+  const { error } = await supabase.from("subjects").delete().eq("id", id);
+  if (error) return { error: "Couldn't delete that subject." };
+
   await audit(admin.id, "subject_deleted", code, {});
   revalidatePath("/admin/subjects");
+  revalidatePath("/admin/sections");
+  return { error: null };
 }
 
 async function audit(

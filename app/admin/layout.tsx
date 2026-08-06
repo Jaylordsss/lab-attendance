@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { requireAdmin } from "@/lib/require-admin";
 import { signOut } from "@/app/login/actions";
+import NavTabs from "@/components/nav-tabs";
 
 const NAV = [
   { href: "/admin", label: "Overview" },
@@ -40,20 +40,7 @@ export default async function AdminLayout({
           </form>
         </div>
 
-        <nav className="mx-auto max-w-6xl px-6">
-          <ul className="flex gap-6 overflow-x-auto">
-            {NAV.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="inline-block py-3 text-sm whitespace-nowrap border-b-2 border-transparent hover:border-[#0B6E5F] hover:text-[#0B6E5F]"
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <NavTabs items={NAV} />
       </div>
 
       <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>

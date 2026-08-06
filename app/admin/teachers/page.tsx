@@ -59,7 +59,6 @@ export default async function TeachersPage() {
                     <Th>Name</Th>
                     <Th>Faculty ID</Th>
                     <Th>Department</Th>
-                    <Th>Role</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -75,11 +74,6 @@ export default async function TeachersPage() {
                         <span className="font-mono">{person.faculty_id}</span>
                       </Td>
                       <Td>{person.department}</Td>
-                      <Td>
-                        <span className="text-xs uppercase tracking-[0.1em] text-[#5A6B7A]">
-                          {person.role}
-                        </span>
-                      </Td>
                     </tr>
                   ))}
                 </tbody>

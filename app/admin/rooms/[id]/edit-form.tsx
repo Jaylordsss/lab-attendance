@@ -1,13 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  updateRoom,
-  deleteRoom,
-  rotateSecret,
-  type RoomState,
-} from "../actions";
+import { updateRoom, rotateSecret, deleteRoom, type RoomState } from "../actions";
+import ConfirmDelete from "@/components/confirm-delete";
 import {
   fieldClass,
   labelClass,
@@ -28,13 +23,9 @@ export type Room = {
 };
 
 export default function EditRoomForm({ room }: { room: Room }) {
-  const router = useRouter();
   const [save, saveAction, saving] = useActionState(updateRoom, initial);
   const [rotate, rotateAction, rotating] = useActionState(rotateSecret, initial);
-  const [remove, removeAction, removing] = useActionState(deleteRoom, initial);
-  const [confirming, setConfirming] = useState<"none" | "rotate" | "delete">(
-    "none",
-  );
+  const [confirmingRotate, setConfirmingRotate] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -134,13 +125,13 @@ export default function EditRoomForm({ room }: { room: Room }) {
       </form>
 
       <div className="border-t border-[#E2E8ED] pt-6 space-y-4">
-        {confirming === "rotate" ? (
+        {confirmingRotate ? (
           <form action={rotateAction} className="space-y-3">
             <input type="hidden" name="id" value={room.id} />
             <p className="text-sm font-medium">Generate a new code?</p>
             <p className="text-sm text-[#5A6B7A] leading-relaxed">
               Every printed sheet for {room.code} stops working immediately.
-              You'll need to print and replace it.
+              You&rsquo;ll need to print and replace it.
             </p>
             {rotate.error && <Notice>{rotate.error}</Notice>}
             <div className="flex gap-2">
@@ -153,34 +144,7 @@ export default function EditRoomForm({ room }: { room: Room }) {
               </button>
               <button
                 type="button"
-                onClick={() => setConfirming("none")}
-                className="text-xs text-[#5A6B7A] underline underline-offset-4"
-              >
-                No, cancel
-              </button>
-            </div>
-          </form>
-        ) : confirming === "delete" ? (
-          <form action={removeAction} className="space-y-3">
-            <input type="hidden" name="id" value={room.id} />
-            <input type="hidden" name="code" value={room.code} />
-            <p className="text-sm font-medium">Delete {room.code}?</p>
-            <p className="text-sm text-[#5A6B7A] leading-relaxed">
-              Only possible if it has never held a class and no section uses it.
-            </p>
-            {remove.error && <Notice>{remove.error}</Notice>}
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={removing}
-                onClick={() => setTimeout(() => router.push("/admin/rooms"), 600)}
-                className="rounded bg-[#A8321F] py-2 px-4 text-xs text-white disabled:opacity-50"
-              >
-                {removing ? "Deleting…" : "Yes, delete"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirming("none")}
+                onClick={() => setConfirmingRotate(false)}
                 className="text-xs text-[#5A6B7A] underline underline-offset-4"
               >
                 No, cancel
@@ -188,22 +152,23 @@ export default function EditRoomForm({ room }: { room: Room }) {
             </div>
           </form>
         ) : (
-          <div className="flex flex-col items-start gap-2">
-            {rotate.success && (
-              <Notice kind="success">{rotate.success}</Notice>
-            )}
+          <div className="flex flex-col items-start gap-3">
+            {rotate.success && <Notice kind="success">{rotate.success}</Notice>}
+
             <button
-              onClick={() => setConfirming("rotate")}
+              onClick={() => setConfirmingRotate(true)}
               className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
             >
               Generate a new code
             </button>
-            <button
-              onClick={() => setConfirming("delete")}
-              className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F]"
-            >
-              Delete this laboratory
-            </button>
+
+            <ConfirmDelete
+              action={deleteRoom}
+              hidden={{ id: room.id, code: room.code }}
+              label="Delete this laboratory"
+              question={`Delete ${room.code}?`}
+              note="Only possible if it has never held a class and no section uses it."
+            />
           </div>
         )}
       </div>

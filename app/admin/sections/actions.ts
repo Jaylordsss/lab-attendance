@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getServiceClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/require-admin";
 
@@ -127,14 +128,15 @@ export async function updateSection(
   return ok("Saved.");
 }
 
+/** Deletes a section, or explains why it cannot. Redirects on success. */
 export async function deleteSection(
-  _prev: SectionState,
+  _prev: { error: string | null },
   formData: FormData,
-): Promise<SectionState> {
+): Promise<{ error: string | null }> {
   const admin = await requireAdmin();
   const id = str(formData, "id");
   const name = str(formData, "name");
-  if (!id) return fail("Missing section.");
+  if (!id) return { error: "Missing section." };
 
   const supabase = getServiceClient();
 
@@ -146,17 +148,17 @@ export async function deleteSection(
     .eq("section_id", id);
 
   if ((count ?? 0) > 0) {
-    return fail(
-      `${name} has attendance history and can't be deleted. Reassign its teacher instead.`,
-    );
+    return {
+      error: `${name} has attendance history and can't be deleted. Reassign its teacher instead.`,
+    };
   }
 
   const { error } = await supabase.from("sections").delete().eq("id", id);
-  if (error) return fail("Couldn't delete the section.");
+  if (error) return { error: "Couldn't delete the section." };
 
   await audit(admin.id, "section_deleted", name, {});
   revalidatePath("/admin/sections");
-  return ok(`${name} deleted.`);
+  redirect("/admin/sections");
 }
 
 function saveError(error: { code?: string }, name: string): string {

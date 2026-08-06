@@ -105,24 +105,46 @@ export async function renameDepartment(
   return ok(`Saved ${code} — ${name}.`);
 }
 
-export async function deleteDepartment(formData: FormData): Promise<void> {
+export async function deleteDepartment(
+  _prev: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "");
 
+  if (!id) return { error: "Missing department." };
+
   const supabase = getServiceClient();
 
-  // Refuse while anyone is still in it. Deleting would leave those staff
-  // pointing at a department that is in no dropdown, which is worse than
-  // making the admin move them first.
-  const { count } = await supabase
+  // Refuse while anyone is still in it. Deleting would leave those people
+  // pointing at a department that appears in no dropdown — worse than making
+  // the administrator move them first.
+  const { count: staffCount } = await supabase
     .from("staff")
     .select("user_id", { count: "exact", head: true })
     .eq("department", name);
 
-  if ((count ?? 0) > 0) return;
+  if ((staffCount ?? 0) > 0) {
+    return {
+      error: `${staffCount} staff member${staffCount === 1 ? " is" : "s are"} still in ${name}. Move them first.`,
+    };
+  }
 
-  await supabase.from("departments").delete().eq("id", id);
+  const { count: studentCount } = await supabase
+    .from("students")
+    .select("user_id", { count: "exact", head: true })
+    .eq("department", name);
+
+  if ((studentCount ?? 0) > 0) {
+    return {
+      error: `${studentCount} student${studentCount === 1 ? " is" : "s are"} still in ${name}. Move them first.`,
+    };
+  }
+
+  const { error } = await supabase.from("departments").delete().eq("id", id);
+  if (error) return { error: "Couldn't delete that department." };
+
   await supabase.from("audit_log").insert({
     actor_id: admin.id,
     action: "department_deleted",
@@ -130,11 +152,13 @@ export async function deleteDepartment(formData: FormData): Promise<void> {
   });
 
   refresh();
+  return { error: null };
 }
 
 function ok(success: string): DeptState {
   return { error: null, success };
 }
+
 function fail(error: string): DeptState {
   return { error, success: null };
 }

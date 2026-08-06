@@ -10,7 +10,6 @@ import {
   selectChevron,
   Notice,
 } from "@/components/admin-ui";
-import PhoneField from "@/app/account/phone-field";
 
 const initial: TeacherState = { error: null, created: null };
 
@@ -106,12 +105,25 @@ export default function TeacherForm({
         />
       </div>
 
-      <PhoneField
-        id="contactNo"
-        name="contactNo"
-        label="Mobile number"
-        hint="Optional. Philippine mobile only."
-      />
+      <div>
+        <label htmlFor="contactNo" className={labelClass}>
+          Mobile number
+        </label>
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-sm text-[#5A6B7A] shrink-0">+63</span>
+          <input
+            id="contactNo"
+            name="contactNo"
+            type="tel"
+            inputMode="numeric"
+            placeholder="917 123 4567"
+            className={`${fieldClass} font-mono placeholder:text-[#B4BFC8]`}
+          />
+        </div>
+        <p className="mt-2 text-xs text-[#5A6B7A] leading-relaxed">
+          Philippine mobile only. 0917… and +63 917… both work.
+        </p>
+      </div>
 
       <p className="text-xs text-[#5A6B7A] leading-relaxed border-t border-[#E2E8ED] pt-5">
         A password is generated automatically and shown once. The teacher

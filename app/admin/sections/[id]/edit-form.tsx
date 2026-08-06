@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState } from "react";
 import { updateSection, deleteSection, type SectionState } from "../actions";
+import ConfirmDelete from "@/components/confirm-delete";
 import { DAY_NAMES } from "../days";
 import {
   fieldClass,
@@ -41,13 +41,7 @@ export default function EditSectionForm({
   rooms: Option[];
   teachers: Teacher[];
 }) {
-  const router = useRouter();
   const [save, saveAction, saving] = useActionState(updateSection, initial);
-  const [remove, removeAction, removing] = useActionState(
-    deleteSection,
-    initial,
-  );
-  const [confirming, setConfirming] = useState(false);
 
   const hhmm = (t: string) => t.slice(0, 5);
 
@@ -194,44 +188,13 @@ export default function EditSectionForm({
       </form>
 
       <div className="border-t border-[#E2E8ED] pt-6">
-        {confirming ? (
-          <form action={removeAction} className="space-y-3">
-            <input type="hidden" name="id" value={section.id} />
-            <input type="hidden" name="name" value={section.name} />
-            <p className="text-sm font-medium">Delete {section.name}?</p>
-            <p className="text-sm text-[#5A6B7A] leading-relaxed">
-              Its enrolments go with it. Only possible if the section has never
-              held a class.
-            </p>
-            {remove.error && <Notice>{remove.error}</Notice>}
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={removing}
-                onClick={() =>
-                  setTimeout(() => router.push("/admin/sections"), 600)
-                }
-                className="rounded bg-[#A8321F] py-2 px-4 text-xs text-white disabled:opacity-50"
-              >
-                {removing ? "Deleting…" : "Yes, delete"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirming(false)}
-                className="text-xs text-[#5A6B7A] underline underline-offset-4"
-              >
-                No, cancel
-              </button>
-            </div>
-          </form>
-        ) : (
-          <button
-            onClick={() => setConfirming(true)}
-            className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F]"
-          >
-            Delete this section
-          </button>
-        )}
+        <ConfirmDelete
+          action={deleteSection}
+          hidden={{ id: section.id, name: section.name }}
+          label="Delete this section"
+          question={`Delete ${section.name}?`}
+          note="Its enrolments go with it. Only possible if the section has never held a class."
+        />
       </div>
     </div>
   );

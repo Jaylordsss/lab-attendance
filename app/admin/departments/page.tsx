@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
 import { deleteDepartment } from "./actions";
+import ConfirmDelete from "@/components/confirm-delete";
 import DeptForm from "./form";
 import RenameCell from "./rename-cell";
 
@@ -64,17 +65,14 @@ export default async function DepartmentsPage() {
                         <span className="font-mono">{d.student_count}</span>
                       </Td>
                       <Td>
-                        {Number(d.faculty_count) === 0 ? (
-                          <form action={deleteDepartment}>
-                            <input type="hidden" name="id" value={d.id} />
-                            <input type="hidden" name="name" value={d.name} />
-                            <button
-                              type="submit"
-                              className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F]"
-                            >
-                              Delete
-                            </button>
-                          </form>
+                        {Number(d.faculty_count) === 0 &&
+                        Number(d.student_count) === 0 ? (
+                          <ConfirmDelete
+                            action={deleteDepartment}
+                            hidden={{ id: d.id, name: d.name }}
+                            question={`Delete ${d.name}?`}
+                            note="It disappears from every department dropdown."
+                          />
                         ) : (
                           <span className="text-xs text-[#B4BFC8]">In use</span>
                         )}

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getServiceClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/require-admin";
 import { newSecret } from "@/lib/qr-token";
@@ -142,14 +143,21 @@ export async function rotateSecret(
   return ok("New code generated. Print and replace the sheet on the door.");
 }
 
+/**
+ * Deletes a laboratory, or explains why it cannot.
+ *
+ * Redirects on success rather than returning, so the caller never has to
+ * decide when to navigate. The earlier version left that to a timer on the
+ * button, which moved the page on before a refusal could be read.
+ */
 export async function deleteRoom(
-  _prev: RoomState,
+  _prev: { error: string | null },
   formData: FormData,
-): Promise<RoomState> {
+): Promise<{ error: string | null }> {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const code = String(formData.get("code") ?? "");
-  if (!id) return fail("Missing laboratory.");
+  if (!id) return { error: "Missing laboratory." };
 
   const supabase = getServiceClient();
 
@@ -162,9 +170,9 @@ export async function deleteRoom(
     .eq("room_id", id);
 
   if ((sessions ?? 0) > 0) {
-    return fail(
-      `${code} has attendance history and can't be deleted. Turn off its printed QR instead.`,
-    );
+    return {
+      error: `${code} has attendance history and can't be deleted. Turn off its printed QR instead.`,
+    };
   }
 
   const { count: sections } = await supabase
@@ -173,17 +181,17 @@ export async function deleteRoom(
     .eq("default_room_id", id);
 
   if ((sections ?? 0) > 0) {
-    return fail(
-      `${sections} section${sections === 1 ? "" : "s"} still use ${code}. Move them first.`,
-    );
+    return {
+      error: `${sections} section${sections === 1 ? "" : "s"} still use ${code}. Move them first.`,
+    };
   }
 
   const { error } = await supabase.from("rooms").delete().eq("id", id);
-  if (error) return fail("Couldn't delete the laboratory.");
+  if (error) return { error: "Couldn't delete the laboratory." };
 
   await audit(admin.id, "room_deleted", code, {});
   revalidatePath("/admin/rooms");
-  return ok(`${code} deleted.`);
+  redirect("/admin/rooms");
 }
 
 export async function setStaticQr(formData: FormData) {

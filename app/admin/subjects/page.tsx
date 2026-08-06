@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
 import { deleteSubject } from "./actions";
+import ConfirmDelete from "@/components/confirm-delete";
 import SubjectForm from "./form";
 import EditSubjectCell from "./edit-cell";
 
@@ -67,16 +68,12 @@ export default async function SubjectsPage() {
                         </Td>
                         <Td>
                           {used === 0 ? (
-                            <form action={deleteSubject}>
-                              <input type="hidden" name="id" value={s.id} />
-                              <input type="hidden" name="code" value={s.code} />
-                              <button
-                                type="submit"
-                                className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F]"
-                              >
-                                Delete
-                              </button>
-                            </form>
+                            <ConfirmDelete
+                              action={deleteSubject}
+                              hidden={{ id: s.id, code: s.code }}
+                              question={`Delete ${s.code}?`}
+                              note="No section uses it, so nothing else changes."
+                            />
                           ) : (
                             <span className="text-xs text-[#B4BFC8]">In use</span>
                           )}
