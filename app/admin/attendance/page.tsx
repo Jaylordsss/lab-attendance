@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Empty, Th, Td } from "@/components/admin-ui";
 import { rpcArgs, toQuery, DAY_NAMES, type LogFilters } from "@/lib/report-filters";
 import Filters from "./filters";
+import PdfPreview from "@/components/pdf-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -80,12 +81,12 @@ export default async function AttendanceLogPage({
           ))}
         </div>
 
-        <a
+        <PdfPreview
           href={`/api/reports/attendance?${query}`}
+          label="View PDF"
+          title="Attendance log"
           className="bg-[#16202B] text-white rounded py-2.5 px-5 text-sm hover:bg-[#0B6E5F] transition-colors"
-        >
-          Download PDF
-        </a>
+        />
       </div>
 
       {rows.length === 0 ? (

@@ -30,10 +30,14 @@ const RED = rgb(0.659, 0.196, 0.122);
 const GREEN = rgb(0.043, 0.431, 0.373);
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  // The same file either way. `preview=1` asks the browser to display it
+  // rather than save it, so the viewer and the saved copy can never disagree.
+  const inline = req.nextUrl.searchParams.get("preview") === "1";
 
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorised" }, { status: 401 });
@@ -275,7 +279,7 @@ export async function GET(
   return new NextResponse(Buffer.from(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${filename}"`,
     },
   });
 }

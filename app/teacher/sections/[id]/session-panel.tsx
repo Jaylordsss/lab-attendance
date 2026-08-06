@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { startSession, endSession } from "./session-actions";
 import QrDisplay from "./qr-display";
+import PdfPreview from "@/components/pdf-preview";
 import type { StartWindow } from "@/lib/schedule";
 
 type Attendee = {
@@ -154,12 +155,12 @@ export default function SessionPanel({
 
         <div className="flex items-center gap-3">
           {sessionId && (
-            <a
+            <PdfPreview
               href={`/api/sessions/${sessionId}/report`}
+              label="View PDF"
+              title="Attendance record"
               className="border border-[#16202B] rounded py-3 px-5 text-sm hover:bg-[#16202B] hover:text-white transition-colors"
-            >
-              Download PDF
-            </a>
+            />
           )}
           <form action={isOpen ? endSession : startSession}>
             <input type="hidden" name="sectionId" value={sectionId} />

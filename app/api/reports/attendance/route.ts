@@ -39,6 +39,10 @@ export async function GET(req: NextRequest) {
   }
 
   const sp = req.nextUrl.searchParams;
+
+  // The same file either way. `preview=1` asks the browser to display it
+  // rather than save it, so the viewer and the saved copy can never disagree.
+  const inline = sp.get("preview") === "1";
   const filters: LogFilters = {
     from: sp.get("from") ?? undefined,
     to: sp.get("to") ?? undefined,
@@ -215,7 +219,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(Buffer.from(bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="attendance-${stamp}.pdf"`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="attendance-${stamp}.pdf"`,
     },
   });
 }
