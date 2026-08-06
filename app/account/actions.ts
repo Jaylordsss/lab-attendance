@@ -93,7 +93,8 @@ export async function changePassword(
     target: user.id,
   });
 
-  redirect(HOME_FOR_ROLE[user.role]);
+  const inSetup = String(formData.get("setup") ?? "") === "1";
+  redirect(inSetup ? "/account?complete=1&done=1" : HOME_FOR_ROLE[user.role]);
 }
 
 /* ------------------------------------------------------------------ *
@@ -196,9 +197,10 @@ export async function updateStudentProfile(
   }
 
   const supabase = await createClient();
+  const service = getServiceClient();
 
-  // Only touch auth if they actually changed it — an unnecessary update fires
-  // a confirmation email every save.
+  // Only touch auth if the address actually changed — rewriting it on every
+  // save is needless work and would reset confirmation state.
   if (email) {
     const { data } = await supabase.auth.getUser();
     const currentEmail = data.user?.email ?? "";
@@ -207,7 +209,12 @@ export async function updateStudentProfile(
       if (!email.includes("@") || isSyntheticStudentEmail(email)) {
         return fail("Enter a real email address.");
       }
-      const { error } = await supabase.auth.updateUser({ email });
+
+      const { error } = await service.auth.admin.updateUserById(user.id, {
+        email,
+        email_confirm: true,
+      });
+
       if (error) {
         return fail(
           error.message.includes("already")
@@ -238,13 +245,13 @@ export async function updateStudentProfile(
     p_user_id: user.id,
   });
 
-  if (complete === true) redirect(HOME_FOR_ROLE.student);
+  if (complete === true) {
+    // Mid-setup, the next step is a password of their own — not the scanner.
+    const inSetup = String(formData.get("setup") ?? "") === "1";
+    redirect(inSetup ? "/account?complete=1" : HOME_FOR_ROLE.student);
+  }
 
-  return ok(
-    email
-      ? "Saved. If you changed your email, confirm it from the link we sent."
-      : "Saved.",
-  );
+  return ok("Saved.");
 }
 
 /* ------------------------------------------------------------------ */

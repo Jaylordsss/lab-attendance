@@ -13,6 +13,7 @@ import PhoneField from "./phone-field";
 const initial: ActionState = { error: null, success: null };
 
 export default function StudentProfileForm({
+  inSetup = false,
   email,
   contactNo,
   guardianName,
@@ -22,6 +23,7 @@ export default function StudentProfileForm({
   birthdate,
   department,
 }: {
+  inSetup?: boolean;
   email: string;
   contactNo: string;
   guardianName: string;
@@ -55,6 +57,7 @@ export default function StudentProfileForm({
       action={formAction}
       className="bg-white border border-[#D8DFE5] rounded-lg p-6 space-y-5"
     >
+      {inSetup && <input type="hidden" name="setup" value="1" />}
       <h2 className="text-sm font-medium">Your details</h2>
 
       <dl className="text-sm border-l-2 border-[#E2E8ED] pl-4 space-y-2">
@@ -155,7 +158,7 @@ export default function StudentProfileForm({
         disabled={pending || !complete}
         className={`${buttonClass} w-full`}
       >
-        {pending ? "Saving…" : "Save changes"}
+        {pending ? "Saving…" : inSetup ? "Save and continue" : "Save changes"}
       </button>
     </form>
   );

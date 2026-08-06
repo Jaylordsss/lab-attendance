@@ -15,7 +15,13 @@ import {
 
 const initial: ActionState = { error: null, success: null };
 
-export default function PasswordForm({ needsCode }: { needsCode: boolean }) {
+export default function PasswordForm({
+  needsCode,
+  inSetup = false,
+}: {
+  needsCode: boolean;
+  inSetup?: boolean;
+}) {
   const [state, formAction, pending] = useActionState(changePassword, initial);
   const [codeState, sendAction, sending] = useActionState(
     sendPasswordCode,
@@ -24,7 +30,9 @@ export default function PasswordForm({ needsCode }: { needsCode: boolean }) {
 
   return (
     <div className="bg-white border border-[#D8DFE5] rounded-lg p-6 space-y-5">
-      <h2 className="text-sm font-medium">Change your password</h2>
+      <h2 className="text-sm font-medium">
+        {inSetup ? "Choose your password" : "Change your password"}
+      </h2>
 
       {needsCode ? (
         <>
@@ -55,6 +63,7 @@ export default function PasswordForm({ needsCode }: { needsCode: boolean }) {
 
       <form action={formAction} className="space-y-5">
         <input type="hidden" name="needsCode" value={String(needsCode)} />
+        {inSetup && <input type="hidden" name="setup" value="1" />}
 
         {needsCode && (
           <div>
@@ -104,7 +113,7 @@ export default function PasswordForm({ needsCode }: { needsCode: boolean }) {
           disabled={pending}
           className={`${buttonClass} w-full`}
         >
-          {pending ? "Saving…" : "Change password"}
+          {pending ? "Saving…" : inSetup ? "Save and continue" : "Change password"}
         </button>
       </form>
     </div>
