@@ -50,7 +50,15 @@ const fail = (error: string): ActionState => ({ error, success: null });
  * It needs no mail server, works offline, and is what most services do.
  */
 
-export async function changePassword(
+/**
+ * Step one: prove the current password, then send a code.
+ *
+ * The new password is not written yet. Verifying the old one stops a
+ * passer-by with an unlocked phone; the emailed code stops someone who has
+ * learned the password but has no access to the inbox. Neither alone is
+ * enough, which is the point of asking for both.
+ */
+export async function startPasswordChange(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -60,8 +68,8 @@ export async function changePassword(
   const current = String(formData.get("currentPassword") ?? "");
   const next = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirmPassword") ?? "");
-  const inSetup = String(formData.get("setup") ?? "") === "1";
 
+  if (!current) return fail("Enter your current password.");
   if (next.length < MIN_PASSWORD) {
     return fail(`Use at least ${MIN_PASSWORD} characters.`);
   }
@@ -71,44 +79,123 @@ export async function changePassword(
   }
 
   const service = getServiceClient();
+  const { data: authUser } = await service.auth.admin.getUserById(user.id);
+  const email = authUser.user?.email;
+
+  if (!email) return fail("Couldn't verify your account. Try again.");
+
+  // A throwaway client, so a wrong guess cannot disturb the session the user
+  // is currently signed in with.
+  const { error: checkErr } = await createIsolatedClient().auth.signInWithPassword(
+    { email, password: current },
+  );
+
+  if (checkErr) return fail("That current password is not right.");
+
   const supabase = await createClient();
+  const { error } = await supabase.auth.reauthenticate();
 
-  // Skipped during first-run setup: the password they hold was issued by
-  // someone else, and asking them to retype it proves nothing.
-  if (!inSetup) {
-    if (!current) return fail("Enter your current password.");
-
-    const { data: authUser } = await service.auth.admin.getUserById(user.id);
-    const email = authUser.user?.email;
-    if (!email) return fail("Couldn't verify your account. Try again.");
-
-    // A throwaway client, so a wrong password cannot disturb the session the
-    // user is currently signed in with.
-    const { error: checkErr } = await createIsolatedClient().auth
-      .signInWithPassword({ email, password: current });
-
-    if (checkErr) return fail("That current password is not right.");
+  if (error) {
+    console.error("reauthenticate:", error.message);
+    return fail(
+      error.message.toLowerCase().includes("rate")
+        ? "Too many codes requested. Wait a few minutes and try again."
+        : "Couldn't send the code. Check your email address is correct.",
+    );
   }
 
-  const { error } = await supabase.auth.updateUser({ password: next });
+  return ok(`Code sent to ${maskEmail(email)}.`);
+}
+
+/** Step two: the code arrives, and only then is the password written. */
+export async function confirmPasswordChange(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const next = String(formData.get("password") ?? "");
+  const nonce = String(formData.get("nonce") ?? "").trim();
+  const inSetup = String(formData.get("setup") ?? "") === "1";
+
+  if (next.length < MIN_PASSWORD) {
+    return fail("Start again — the new password was lost.");
+  }
+  if (!nonce) return fail("Enter the code from your email.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: next, nonce });
 
   if (error) {
     console.error("password change:", error.message);
-    return fail("Couldn't change your password. Try again.");
+    return fail(
+      error.message.toLowerCase().includes("nonce")
+        ? "That code is wrong or has expired. Send a new one."
+        : "Couldn't change your password. Try again.",
+    );
   }
+
+  await finishPasswordChange(user.id);
+  redirect(inSetup ? "/account?complete=1&done=1" : HOME_FOR_ROLE[user.role]);
+}
+
+/**
+ * First-run setup, where there is no code step.
+ *
+ * The password a new account holds was issued by someone else, and a student
+ * on a synthetic @students.invalid address has no inbox a code could reach.
+ * Requiring one here would lock out exactly the people who most need to get
+ * in.
+ */
+export async function setInitialPassword(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const next = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
+
+  if (next.length < MIN_PASSWORD) {
+    return fail(`Use at least ${MIN_PASSWORD} characters.`);
+  }
+  if (next !== confirm) return fail("The two passwords don't match.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: next });
+
+  if (error) {
+    console.error("initial password:", error.message);
+    return fail("Couldn't set your password. Try again.");
+  }
+
+  await finishPasswordChange(user.id);
+  redirect("/account?complete=1&done=1");
+}
+
+async function finishPasswordChange(userId: string) {
+  const service = getServiceClient();
 
   await service
     .from("profiles")
     .update({ must_change_password: false })
-    .eq("id", user.id);
+    .eq("id", userId);
 
   await service.from("audit_log").insert({
-    actor_id: user.id,
+    actor_id: userId,
     action: "password_changed",
-    target: user.id,
+    target: userId,
   });
+}
 
-  redirect(inSetup ? "/account?complete=1&done=1" : HOME_FOR_ROLE[user.role]);
+/** j****d@gmail.com — enough to recognise, not enough to harvest. */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  if (local.length <= 2) return `${local[0]}***@${domain}`;
+  return `${local[0]}${"*".repeat(Math.min(local.length - 2, 5))}${local.at(-1)}@${domain}`;
 }
 
 /* ------------------------------------------------------------------ *
