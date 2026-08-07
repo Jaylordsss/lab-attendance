@@ -35,6 +35,12 @@ export default async function StudentLayout({
           </div>
           <div className="flex items-baseline gap-4">
             <Link
+              href="/student/attendance"
+              className="text-sm text-[#5A6B7A] underline underline-offset-4"
+            >
+              My attendance
+            </Link>
+            <Link
               href="/account"
               className="text-sm text-[#5A6B7A] underline underline-offset-4"
             >

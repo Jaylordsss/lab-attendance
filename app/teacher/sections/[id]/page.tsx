@@ -143,12 +143,20 @@ export default async function SectionPage({
 
   return (
     <>
-      <Link
-        href="/teacher"
-        className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
-      >
-        All your sections
-      </Link>
+      <div className="flex items-baseline gap-5 flex-wrap">
+        <Link
+          href="/teacher"
+          className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+        >
+          All your sections
+        </Link>
+        <Link
+          href={`/teacher/sections/${id}/history`}
+          className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+        >
+          Past classes
+        </Link>
+      </div>
 
       <div className="mt-4" />
 
