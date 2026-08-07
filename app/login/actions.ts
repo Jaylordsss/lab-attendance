@@ -96,13 +96,22 @@ export async function signIn(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, must_change_password")
+    .select("role, status, must_change_password")
     .eq("id", data.user.id)
     .single();
 
   if (!profile) {
     await supabase.auth.signOut();
     return { error: "This account isn't set up yet. Ask your teacher." };
+  }
+
+  // Checked after the password, so a suspended account cannot be identified
+  // by guessing at student numbers.
+  if (profile.status === "suspended") {
+    await supabase.auth.signOut();
+    return {
+      error: "This account has been suspended. Ask the administrator.",
+    };
   }
 
   // Anyone still on an issued password chooses their own before going further.

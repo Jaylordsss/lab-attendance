@@ -1,9 +1,9 @@
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { PageHeader, Empty, Th, Td } from "@/components/admin-ui";
 import Filters from "./filters";
 import IdEditor from "./id-editor";
 import UserActions from "./user-actions";
+import AccountControls from "./account-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ export default async function UsersPage({
   searchParams: Promise<{ role?: string; department?: string; q?: string }>;
 }) {
   const { role, department, q } = await searchParams;
+  const me = await getCurrentUser();
   const supabase = await createClient();
 
   const [usersRes, deptRes] = await Promise.all([
@@ -76,22 +77,14 @@ export default async function UsersPage({
                 <Th>Department</Th>
                 <Th>Status</Th>
                 <Th>{""}</Th>
+                <Th>{""}</Th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
                 <tr key={u.user_id} className="border-b border-[#F0F3F5]">
                   <Td>
-                    {u.role === "student" ? (
-                      <Link
-                        href={`/admin/students/${u.user_id}`}
-                        className="block underline underline-offset-4 hover:text-[#0B6E5F]"
-                      >
-                        {u.full_name}
-                      </Link>
-                    ) : (
-                      <span className="block">{u.full_name}</span>
-                    )}
+                    <span className="block">{u.full_name}</span>
                     {u.email && (
                       <span className="block text-xs text-[#5A6B7A]">
                         {u.email}
@@ -139,6 +132,14 @@ export default async function UsersPage({
                       userId={u.user_id}
                       name={u.full_name}
                       isStudent={u.role === "student"}
+                    />
+                  </Td>
+                  <Td>
+                    <AccountControls
+                      userId={u.user_id}
+                      name={u.full_name}
+                      suspended={u.status === "suspended"}
+                      isSelf={u.user_id === me?.id}
                     />
                   </Td>
                 </tr>
