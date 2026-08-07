@@ -1,9 +1,13 @@
 /**
- * A small CSV reader.
+ * A small delimited-text reader.
  *
- * Deliberately not a dependency: school rosters are exported from Excel, and
- * the only awkward cases are quoted fields containing commas and the BOM Excel
- * writes at the start of a UTF-8 file. Both are handled here in forty lines.
+ * Deliberately not a dependency: school rosters arrive in three shapes and
+ * each has one quirk. A saved .csv uses commas and carries the byte-order mark
+ * Excel writes. A range copied out of Google Sheets or Excel uses tabs. And
+ * any of them may contain a quoted field with the delimiter inside it.
+ *
+ * The delimiter is detected rather than configured, because a teacher
+ * selecting cells and pressing copy has no idea what separates them.
  */
 
 export type CsvRow = Record<string, string>;
@@ -14,7 +18,7 @@ export function parseCsv(text: string): CsvRow[] {
   const clean = text.replace(/^\uFEFF/, "").trim();
   if (!clean) return [];
 
-  const lines = splitRows(clean);
+  const lines = splitRows(clean, detectDelimiter(clean));
   if (lines.length < 2) return [];
 
   const header = lines[0].map((h) =>
@@ -33,8 +37,26 @@ export function parseCsv(text: string): CsvRow[] {
   });
 }
 
-/** Splits on newlines and commas, respecting double-quoted fields. */
-function splitRows(text: string): string[][] {
+/**
+ * Whichever separator appears more often in the first line wins.
+ *
+ * Counting on the header alone is enough and safer than counting the whole
+ * file: an address like "Caggay, Tuguegarao City" is full of commas, and in a
+ * tab-separated paste those would otherwise outvote the real delimiter.
+ */
+function detectDelimiter(text: string): string {
+  const header = text.split(/\r?\n/, 1)[0] ?? "";
+  const tabs = (header.match(/\t/g) ?? []).length;
+  const commas = (header.match(/,/g) ?? []).length;
+  const semicolons = (header.match(/;/g) ?? []).length;
+
+  if (tabs >= commas && tabs >= semicolons && tabs > 0) return "\t";
+  if (semicolons > commas) return ";";
+  return ",";
+}
+
+/** Splits on newlines and the given delimiter, respecting quoted fields. */
+function splitRows(text: string, delimiter: string): string[][] {
   const rows: string[][] = [];
   let cells: string[] = [];
   let cell = "";
@@ -59,7 +81,7 @@ function splitRows(text: string): string[][] {
     }
 
     if (ch === '"') quoted = true;
-    else if (ch === ",") {
+    else if (ch === delimiter) {
       cells.push(cell);
       cell = "";
     } else if (ch === "\n") {

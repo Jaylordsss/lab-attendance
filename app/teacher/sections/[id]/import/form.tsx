@@ -230,7 +230,7 @@ export default function ImportForm({ sectionId }: { sectionId: string }) {
       </div>
 
       <div>
-        <p className="text-sm font-medium">Or paste it here</p>
+        <p className="text-sm font-medium">Or paste from a spreadsheet</p>
         <textarea
           value={csv}
           onChange={(e) => setCsv(e.target.value)}
@@ -239,6 +239,10 @@ export default function ImportForm({ sectionId }: { sectionId: string }) {
           placeholder={TEMPLATE}
           className="mt-2 w-full rounded border border-[#D8DFE5] p-3 font-mono text-xs outline-none focus:border-[#0B6E5F] placeholder:text-[#B4BFC8]"
         />
+        <p className="mt-2 text-xs text-[#5A6B7A] leading-relaxed">
+          Select the header row and your students in Google Sheets or Excel,
+          copy, and paste here. Commas and tabs both work.
+        </p>
       </div>
 
       {preview.error && <Notice>{preview.error}</Notice>}
