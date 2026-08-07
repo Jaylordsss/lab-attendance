@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 
+const linkClass =
+  "text-sm text-[#5A6B7A] underline underline-offset-4 whitespace-nowrap hover:text-[#0B6E5F]";
+
 export default async function StudentLayout({
   children,
 }: {
@@ -25,38 +28,47 @@ export default async function StudentLayout({
 
   return (
     <div className="min-h-dvh bg-[#FBFAF7] text-[#16202B]">
+      {/*
+        Two rows rather than one. On a phone the name and three links do not
+        fit side by side, and squeezing them wraps "Sign out" onto its own
+        line mid-word — which reads as a layout fault rather than a header.
+      */}
       <div className="border-b border-[#D8DFE5] bg-white">
-        <div className="mx-auto max-w-md px-6 py-4 flex items-baseline justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
-              Attendance
-            </p>
-            <p className="text-sm font-medium">{user.fullName}</p>
-          </div>
-          <div className="flex items-baseline gap-4">
-            <Link
-              href="/student/attendance"
-              className="text-sm text-[#5A6B7A] underline underline-offset-4"
-            >
-              My attendance
-            </Link>
-            <Link
-              href="/account"
-              className="text-sm text-[#5A6B7A] underline underline-offset-4"
-            >
-              Account
-            </Link>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-[#5A6B7A] underline underline-offset-4"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
+        <div className="mx-auto max-w-md px-6 pt-4 pb-3">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
+            Attendance
+          </p>
+          <p className="text-sm font-medium">{user.fullName}</p>
         </div>
+
+        <nav className="mx-auto max-w-md px-6 pb-3">
+          <ul className="flex items-baseline gap-5 overflow-x-auto">
+            <li>
+              <Link href="/student" className={linkClass}>
+                Scanner
+              </Link>
+            </li>
+            <li>
+              <Link href="/student/attendance" className={linkClass}>
+                My attendance
+              </Link>
+            </li>
+            <li>
+              <Link href="/account" className={linkClass}>
+                Account
+              </Link>
+            </li>
+            <li className="ml-auto">
+              <form action={signOut}>
+                <button type="submit" className={linkClass}>
+                  Sign out
+                </button>
+              </form>
+            </li>
+          </ul>
+        </nav>
       </div>
+
       <main className="mx-auto max-w-md px-6 py-8">{children}</main>
     </div>
   );
