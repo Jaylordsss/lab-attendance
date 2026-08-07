@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireTeacher } from "@/lib/require-teacher";
 import { PageHeader } from "@/components/admin-ui";
-import ImportForm from "./form";
+import ImportTabs from "./tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -40,13 +40,12 @@ export default async function ImportPage({
           eyebrow={`${s.subjects?.code} · ${s.name}`}
           title="Import a roster"
         >
-          Paste your class list or choose a CSV file. Nothing is saved until
-          you have seen what it will do.
+          Nothing is saved until you have seen what it will do.
         </PageHeader>
       </div>
 
       <div className="max-w-2xl">
-        <ImportForm sectionId={id} />
+        <ImportTabs sectionId={id} />
       </div>
     </>
   );
