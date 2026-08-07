@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 import { getServiceClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/require-admin";
 
@@ -18,10 +19,20 @@ type Footprint = {
   is_last_admin: boolean;
 };
 
+/**
+ * Runs as the signed-in administrator, not the service role.
+ *
+ * account_footprint checks is_admin(), which reads auth.uid() — and the
+ * service role has no user identity, so the check failed and the function
+ * raised. The empty result then read as "that account no longer exists".
+ */
 async function footprintOf(userId: string): Promise<Footprint | null> {
-  const { data } = await getServiceClient().rpc("account_footprint", {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("account_footprint", {
     p_user_id: userId,
   });
+
+  if (error) console.error("account_footprint:", error.message);
   return ((data ?? []) as Footprint[])[0] ?? null;
 }
 
@@ -91,15 +102,15 @@ export async function reactivateAccount(
 }
 
 /**
- * Removes an account and everything cascading from it.
+ * Removes an account. Its attendance record stays.
  *
- * Refused whenever there is history to lose. Deleting a student takes their
- * attendance rows with them, which quietly rewrites past registers — a class
- * that had thirty present last term would afterwards show twenty-nine, with
- * no record that anything changed.
+ * For a student who has transferred or left. Each attendance row carries the
+ * number and name it was written with, so past registers and every PDF read
+ * exactly as they did before — the row simply stops pointing at an account
+ * that no longer exists.
  *
- * So this is for accounts created in error: a typo'd student number, a
- * duplicate, a teacher who never taught. Everything else is suspended.
+ * Suspension remains the better choice for someone who may return, since it
+ * is reversible and keeps them on their rosters.
  */
 export async function deleteAccount(
   _prev: AccountState,
@@ -129,12 +140,6 @@ export async function deleteAccount(
     return fail("This is the only administrator. Create another one first.");
   }
 
-  if (Number(footprint.attendance_rows) > 0) {
-    return fail(
-      `${name} has ${footprint.attendance_rows} attendance records. Deleting would remove them from past registers — suspend the account instead.`,
-    );
-  }
-
   if (Number(footprint.sections_taught) > 0) {
     return fail(
       `${name} still teaches ${footprint.sections_taught} section${footprint.sections_taught === 1 ? "" : "s"}. Reassign them first.`,
@@ -150,9 +155,17 @@ export async function deleteAccount(
     return fail("Couldn't delete that account.");
   }
 
-  await audit(admin.id, "account_deleted", userId, { name });
+  await audit(admin.id, "account_deleted", userId, {
+    name,
+    attendance_rows_kept: footprint.attendance_rows,
+  });
   revalidatePath("/admin/users");
-  return ok(`${name} deleted.`);
+
+  return ok(
+    Number(footprint.attendance_rows) > 0
+      ? `${name} deleted. Their ${footprint.attendance_rows} attendance records stay in the register.`
+      : `${name} deleted.`,
+  );
 }
 
 async function audit(

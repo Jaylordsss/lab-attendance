@@ -70,8 +70,8 @@ export default function AccountControls({
         <input type="hidden" name="name" value={name} />
         <p className="text-xs font-medium">Suspend {name}?</p>
         <p className="text-xs text-[#5A6B7A] leading-relaxed">
-          They can&rsquo;t sign in, but their attendance history stays. You can
-          undo this at any time.
+          They can&rsquo;t sign in but stay on their rosters, and you can undo
+          it at any time. Better than deleting for anyone who might return.
         </p>
         {suspend.error && <Notice>{suspend.error}</Notice>}
         <div className="flex gap-2">
@@ -103,8 +103,9 @@ export default function AccountControls({
           Delete {name} permanently?
         </p>
         <p className="text-xs text-[#5A6B7A] leading-relaxed">
-          Only possible for an account with no attendance history. This cannot
-          be undone.
+          For a student who has transferred or left. Their attendance record
+          stays in the register and in every PDF — only the account goes. This
+          cannot be undone.
         </p>
         <input
           name="confirm"
@@ -144,11 +145,11 @@ export default function AccountControls({
         onClick={() => setMode("delete")}
         className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F] text-left"
       >
-        Delete
+        Delete account
       </button>
-      {suspend.success && (
+      {(suspend.success || remove.success) && (
         <span className="text-xs" style={{ color: "#0B6E5F" }}>
-          {suspend.success}
+          {suspend.success ?? remove.success}
         </span>
       )}
     </div>
