@@ -240,8 +240,9 @@ export default function ImportForm({ sectionId }: { sectionId: string }) {
           className="mt-2 w-full rounded border border-[#D8DFE5] p-3 font-mono text-xs outline-none focus:border-[#0B6E5F] placeholder:text-[#B4BFC8]"
         />
         <p className="mt-2 text-xs text-[#5A6B7A] leading-relaxed">
-          Select the header row and your students in Google Sheets or Excel,
-          copy, and paste here. Commas and tabs both work.
+          Select your students in Google Sheets or Excel and paste. Include the
+          header row if you can — without it the columns are read in the order
+          shown below.
         </p>
       </div>
 
@@ -257,6 +258,11 @@ export default function ImportForm({ sectionId }: { sectionId: string }) {
 
       <div className="border-t border-[#E2E8ED] pt-5 text-xs text-[#5A6B7A] leading-relaxed space-y-2">
         <p className="font-medium text-[#16202B]">Columns</p>
+        <p className="font-medium text-[#16202B]">Column order</p>
+        <p className="font-mono text-[11px] leading-relaxed">
+          student_no · full_name · email · birthdate · department · contact_no
+          · address · guardian_name · guardian_phone
+        </p>
         <p>
           Every column is needed for a new student:{" "}
           <span className="font-mono">student_no</span>,{" "}

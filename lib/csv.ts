@@ -12,23 +12,85 @@
 
 export type CsvRow = Record<string, string>;
 
+/** Accepts the spellings a Philippine school is likely to export. */
+export const COLUMN_ALIASES: Record<string, string[]> = {
+  student_no: ["student_no", "student_number", "student_id", "id_number", "lrn"],
+  full_name: ["full_name", "name", "student_name", "fullname"],
+  birthdate: ["birthdate", "birthday", "date_of_birth", "dob", "birth_date"],
+  address: ["address", "home_address"],
+  guardian_name: ["guardian_name", "guardian", "parent_name", "parent"],
+  guardian_phone: [
+    "guardian_phone",
+    "guardian_contact",
+    "guardian_mobile",
+    "parent_contact",
+    "contact_number",
+  ],
+  email: ["email", "email_address", "e_mail", "student_email", "gmail"],
+  contact_no: [
+    "contact_no",
+    "student_contact",
+    "student_mobile",
+    "mobile",
+    "mobile_number",
+    "cellphone",
+    "cp_number",
+  ],
+  department: ["department", "dept", "course", "program", "strand"],
+};
+
+/**
+ * Column order assumed when a paste arrives without its header row.
+ *
+ * Selecting the header as well as the students is one extra keystroke that
+ * people reliably forget, and the failure is silent — every column comes back
+ * empty and the preview blames the data. Falling back to a known order costs
+ * nothing when the header is present and rescues the common mistake when it
+ * is not.
+ */
+export const DEFAULT_COLUMNS = [
+  "student_no",
+  "full_name",
+  "email",
+  "birthdate",
+  "department",
+  "contact_no",
+  "address",
+  "guardian_name",
+  "guardian_phone",
+] as const;
+
+/** True when the first row names columns rather than describing a student. */
+function looksLikeHeader(cells: string[]): boolean {
+  const normalised = cells.map((c) =>
+    c.trim().toLowerCase().replace(/\s+/g, "_"),
+  );
+
+  const known = new Set(Object.values(COLUMN_ALIASES).flat());
+  return normalised.some((c) => known.has(c));
+}
+
 export function parseCsv(text: string): CsvRow[] {
   // Excel writes a byte-order mark that would otherwise become part of the
   // first column's name, so the header never matches.
   const clean = text.replace(/^\uFEFF/, "").trim();
   if (!clean) return [];
 
-  const lines = splitRows(clean, detectDelimiter(clean));
-  if (lines.length < 2) return [];
-
-  const header = lines[0].map((h) =>
-    h.trim().toLowerCase().replace(/\s+/g, "_"),
+  const lines = splitRows(clean, detectDelimiter(clean)).filter(
+    (cells) => !cells.every((c) => c.trim() === ""),
   );
 
-  return lines.slice(1).flatMap((cells) => {
-    // Skip blank lines rather than importing a row of empty strings.
-    if (cells.every((c) => c.trim() === "")) return [];
+  if (lines.length === 0) return [];
 
+  const hasHeader = looksLikeHeader(lines[0]);
+
+  const header = hasHeader
+    ? lines[0].map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"))
+    : [...DEFAULT_COLUMNS];
+
+  const body = hasHeader ? lines.slice(1) : lines;
+
+  return body.flatMap((cells) => {
     const row: CsvRow = {};
     header.forEach((key, i) => {
       row[key] = (cells[i] ?? "").trim();
@@ -98,33 +160,6 @@ function splitRows(text: string, delimiter: string): string[][] {
   rows.push(cells);
   return rows;
 }
-
-/** Accepts the spellings a Philippine school is likely to export. */
-export const COLUMN_ALIASES: Record<string, string[]> = {
-  student_no: ["student_no", "student_number", "student_id", "id_number", "lrn"],
-  full_name: ["full_name", "name", "student_name", "fullname"],
-  birthdate: ["birthdate", "birthday", "date_of_birth", "dob", "birth_date"],
-  address: ["address", "home_address"],
-  guardian_name: ["guardian_name", "guardian", "parent_name", "parent"],
-  guardian_phone: [
-    "guardian_phone",
-    "guardian_contact",
-    "guardian_mobile",
-    "parent_contact",
-    "contact_number",
-  ],
-  email: ["email", "email_address", "e_mail", "student_email", "gmail"],
-  contact_no: [
-    "contact_no",
-    "student_contact",
-    "student_mobile",
-    "mobile",
-    "mobile_number",
-    "cellphone",
-    "cp_number",
-  ],
-  department: ["department", "dept", "course", "program", "strand"],
-};
 
 export function pick(row: CsvRow, field: keyof typeof COLUMN_ALIASES): string {
   for (const alias of COLUMN_ALIASES[field]) {
