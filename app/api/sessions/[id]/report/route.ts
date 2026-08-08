@@ -115,12 +115,43 @@ export async function GET(
     year: "numeric",
   });
   text(
-    `${dateLabel} · ${String(header.start_time).slice(0, 5)}–${String(header.end_time).slice(0, 5)} · ${header.grace_minutes} min grace`,
+    `${dateLabel} · scheduled ${String(header.start_time).slice(0, 5)}–${String(header.end_time).slice(0, 5)} · ${header.grace_minutes} min grace`,
     M,
     10,
     regular,
     MUTED,
   );
+  y -= 18;
+
+  /*
+   * When the teacher actually opened and closed the class.
+   *
+   * A register that shows only the scheduled hours cannot answer the question
+   * it will eventually be asked — whether the class ran at all, and for how
+   * long. The teacher's own presence is as much a part of the record as the
+   * students', and it is already captured; it simply was not printed.
+   */
+  const openedAt = header.opened_at ? clockTime(header.opened_at) : null;
+  const closedAt = header.closed_at ? clockTime(header.closed_at) : null;
+
+  const duration =
+    header.opened_at && header.closed_at
+      ? Math.round(
+          (new Date(header.closed_at).getTime() -
+            new Date(header.opened_at).getTime()) /
+            60000,
+        )
+      : null;
+
+  const conduct = [
+    openedAt ? `Opened ${openedAt}` : "Never opened",
+    closedAt ? `closed ${closedAt}` : "still open",
+    duration !== null ? `${formatDuration(duration)} in session` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  text(conduct, M, 10, regular, INK);
   y -= 24;
 
   // ---- summary -------------------------------------------------------
@@ -163,6 +194,21 @@ export async function GET(
   y -= 22;
 
   // ---- attendance table ----------------------------------------------
+  text("CONDUCTED BY", M, 8, bold, MUTED);
+  y -= 14;
+  text(header.teacher_name, M, 11, bold);
+  y -= 13;
+  text(
+    openedAt
+      ? `Opened the laboratory at ${openedAt}${closedAt ? ` and closed it at ${closedAt}` : ""}`
+      : "This class was never opened",
+    M,
+    9,
+    regular,
+    MUTED,
+  );
+  y -= 26;
+
   text("ATTENDANCE", M, 8, bold, MUTED);
   y -= 16;
 
@@ -176,7 +222,7 @@ export async function GET(
   };
   headerRow();
 
-  const timeOf = (iso: string | null) =>
+const timeOf = (iso: string | null) =>
     iso
       ? new Date(iso).toLocaleTimeString("en-PH", {
           timeZone: "Asia/Manila",
@@ -282,4 +328,20 @@ export async function GET(
       "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${filename}"`,
     },
   });
+}
+
+function clockTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-PH", {
+    timeZone: "Asia/Manila",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** 95 minutes reads better as 1h 35m on a printed sheet. */
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
 }
