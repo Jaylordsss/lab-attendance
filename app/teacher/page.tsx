@@ -45,20 +45,27 @@ export default async function TeacherHome() {
                 href={`/teacher/sections/${s.id}`}
                 className="block bg-white border border-[#D8DFE5] rounded-lg p-5 hover:border-[#0B6E5F] transition-colors"
               >
-                <div className="flex items-baseline justify-between gap-4 flex-wrap">
-                  <div>
+                {/*
+                  Stacked on a phone, side by side from small tablets up.
+                  Squeezing both columns onto a narrow screen pushed the day
+                  and time into the middle of the card, where it read as
+                  belonging to nothing.
+                */}
+                <div className="sm:flex sm:items-baseline sm:justify-between sm:gap-4">
+                  <div className="min-w-0">
                     <p className="font-medium">{s.name}</p>
                     <p className="text-sm text-[#5A6B7A]">
                       {s.subjects?.code} — {s.subjects?.title}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm">{DAY_NAMES[s.day_of_week]}</p>
-                    <p className="font-mono text-xs text-[#5A6B7A]">
+
+                  <p className="mt-2 text-sm text-[#5A6B7A] sm:mt-0 sm:text-right sm:shrink-0">
+                    <span className="sm:block">{DAY_NAMES[s.day_of_week]}</span>{" "}
+                    <span className="font-mono text-xs">
                       {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)} ·{" "}
                       {s.rooms?.code ?? "—"}
-                    </p>
-                  </div>
+                    </span>
+                  </p>
                 </div>
               </Link>
             </li>
