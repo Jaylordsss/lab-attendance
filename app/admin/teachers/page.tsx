@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
-import { formatPhPhone } from "@/lib/auth";
+import { PageHeader, Card } from "@/components/admin-ui";
+import DataTable from "@/components/data-table";
 import TeacherForm from "./form";
 
 export const dynamic = "force-dynamic";
@@ -24,10 +24,11 @@ export default async function TeachersPage() {
   ]);
 
   const staff = (staffRes.data ?? []) as StaffRow[];
-  const departments = (deptRes.data ?? []) as {
+  const deptRows = (deptRes.data ?? []) as {
     department: string;
     code: string;
   }[];
+  const codeFor = new Map(deptRows.map((d) => [d.department, d.code]));
 
   return (
     <>
@@ -37,7 +38,7 @@ export default async function TeachersPage() {
         sign-in.
       </PageHeader>
 
-      {departments.length === 0 && (
+      {deptRows.length === 0 && (
         <p className="mb-6 text-sm border-l-2 border-[#A8321F] pl-3 text-[#A8321F]">
           No departments exist yet.{" "}
           <Link href="/admin/departments" className="underline underline-offset-4">
@@ -49,41 +50,40 @@ export default async function TeachersPage() {
 
       <div className="grid gap-8 md:grid-cols-[1fr_320px] md:items-start">
         <section>
-          {staff.length === 0 ? (
-            <Empty>No staff accounts yet besides your own.</Empty>
-          ) : (
-            <div className="bg-white border border-[#D8DFE5] rounded-lg p-6 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#E2E8ED]">
-                    <Th>Name</Th>
-                    <Th>Faculty ID</Th>
-                    <Th>Department</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staff.map((person) => (
-                    <tr key={person.user_id} className="border-b border-[#F0F3F5]">
-                      <Td>
-                        <span className="block">{person.full_name}</span>
-                        <span className="block text-xs text-[#5A6B7A]">
-                          {person.email}
-                        </span>
-                      </Td>
-                      <Td>
-                        <span className="font-mono">{person.faculty_id}</span>
-                      </Td>
-                      <Td>{person.department}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            empty="No staff accounts yet besides your own."
+            columns={[
+              { head: "Name" },
+              { head: "Faculty ID" },
+              { head: "Department" },
+            ]}
+            rows={staff.map((p) => ({
+              key: p.user_id,
+              cells: [
+                <div key="name">
+                  <Link
+                    href={`/admin/users/${p.user_id}`}
+                    className="underline underline-offset-4 hover:text-[#0B6E5F]"
+                  >
+                    {p.full_name}
+                  </Link>
+                  <span className="block text-xs font-normal text-[#5A6B7A] break-all">
+                    {p.email}
+                  </span>
+                </div>,
+                <span key="fid" className="font-mono">
+                  {p.faculty_id}
+                </span>,
+                <span key="dept" title={p.department} className="font-mono">
+                  {codeFor.get(p.department) ?? p.department}
+                </span>,
+              ],
+            }))}
+          />
         </section>
 
         <Card>
-          <TeacherForm departments={departments} />
+          <TeacherForm departments={deptRows} />
         </Card>
       </div>
     </>

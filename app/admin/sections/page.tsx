@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
+import { PageHeader, Card } from "@/components/admin-ui";
+import DataTable from "@/components/data-table";
 import SectionForm from "./form";
 import { DAY_NAMES } from "./days";
 
@@ -23,8 +24,16 @@ export default async function SectionsPage() {
   ]);
 
   const sections = (sectionsRes.data ?? []) as any[];
-  const subjects = (subjectsRes.data ?? []) as { id: string; code: string; title: string }[];
-  const rooms = (roomsRes.data ?? []) as { id: string; code: string; name: string }[];
+  const subjects = (subjectsRes.data ?? []) as {
+    id: string;
+    code: string;
+    title: string;
+  }[];
+  const rooms = (roomsRes.data ?? []) as {
+    id: string;
+    code: string;
+    name: string;
+  }[];
   const teachers = ((staffRes.data ?? []) as any[]).filter(
     (s) => s.role === "teacher",
   );
@@ -35,50 +44,44 @@ export default async function SectionsPage() {
     <>
       <PageHeader eyebrow="Admin" title="Sections">
         A section binds a subject, a teacher, a laboratory and a weekly time
-        slot. Students are enrolled into sections, and attendance is recorded
-        against them.
+        slot. Students are enrolled into sections.
       </PageHeader>
 
       <div className="grid gap-8 md:grid-cols-[1fr_320px] md:items-start">
         <section>
-          {sections.length === 0 ? (
-            <Empty>No sections yet.</Empty>
-          ) : (
-            <div className="bg-white border border-[#D8DFE5] rounded-lg p-6 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#E2E8ED]">
-                    <Th>Section</Th>
-                    <Th>Subject</Th>
-                    <Th>Laboratory</Th>
-                    <Th>When</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sections.map((s) => (
-                    <tr key={s.id} className="border-b border-[#F0F3F5]">
-                      <Td>
-                        <Link
-                          href={`/admin/sections/${s.id}`}
-                          className="underline underline-offset-4 hover:text-[#0B6E5F]"
-                        >
-                          {s.name}
-                        </Link>
-                      </Td>
-                      <Td><span className="font-mono">{s.subjects?.code}</span></Td>
-                      <Td><span className="font-mono">{s.rooms?.code ?? "—"}</span></Td>
-                      <Td>
-                        <span className="block">{DAY_NAMES[s.day_of_week]}</span>
-                        <span className="block font-mono text-xs text-[#5A6B7A]">
-                          {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
-                        </span>
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            empty="No sections yet."
+            columns={[
+              { head: "Section" },
+              { head: "Subject" },
+              { head: "Laboratory" },
+              { head: "When" },
+            ]}
+            rows={sections.map((s) => ({
+              key: s.id,
+              cells: [
+                <Link
+                  key="name"
+                  href={`/admin/sections/${s.id}`}
+                  className="underline underline-offset-4 hover:text-[#0B6E5F]"
+                >
+                  {s.name}
+                </Link>,
+                <span key="subj" className="font-mono">
+                  {s.subjects?.code}
+                </span>,
+                <span key="room" className="font-mono">
+                  {s.rooms?.code ?? "—"}
+                </span>,
+                <span key="when">
+                  {DAY_NAMES[s.day_of_week]}{" "}
+                  <span className="font-mono text-xs text-[#5A6B7A]">
+                    {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
+                  </span>
+                </span>,
+              ],
+            }))}
+          />
         </section>
 
         <Card>

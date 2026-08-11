@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
-import { PageHeader, Empty, Th, Td } from "@/components/admin-ui";
+import { PageHeader } from "@/components/admin-ui";
+import DataTable from "@/components/data-table";
 import Filters from "./filters";
 import IdEditor from "./id-editor";
 import UserActions from "./user-actions";
@@ -44,15 +46,15 @@ export default async function UsersPage({
   }[];
   const departments = deptRows.map((d) => d.department);
 
-  // Full names run long. Showing the short code keeps the row readable, with
-  // the full name still available on hover.
+  // Full names run long. The short code keeps a row readable, with the full
+  // name still available on hover.
   const codeFor = new Map(deptRows.map((d) => [d.department, d.code]));
 
   return (
     <>
       <PageHeader eyebrow="Admin" title="All users">
-        Everyone with an account. Guardian details and addresses are not shown
-        here — open a student's record for those.
+        Tap a name for their record. Guardian details and addresses are not
+        shown here.
       </PageHeader>
 
       <Filters
@@ -62,95 +64,88 @@ export default async function UsersPage({
         q={q ?? ""}
       />
 
-      {users.length === 0 ? (
-        <div className="mt-6">
-          <Empty>No accounts match those filters.</Empty>
-        </div>
-      ) : (
-        <div className="mt-6 bg-white border border-[#D8DFE5] rounded-lg p-6 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#E2E8ED]">
-                <Th>Name</Th>
-                <Th>ID number</Th>
-                <Th>Role</Th>
-                <Th>Department</Th>
-                <Th>Status</Th>
-                <Th>{""}</Th>
-                <Th>{""}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.user_id} className="border-b border-[#F0F3F5]">
-                  <Td>
-                    <span className="block">{u.full_name}</span>
-                    {u.email && (
-                      <span className="block text-xs text-[#5A6B7A]">
-                        {u.email}
-                      </span>
-                    )}
-                  </Td>
-                  <Td>
-                    <IdEditor
-                      userId={u.user_id}
-                      role={u.role}
-                      identifier={u.identifier}
-                      department={u.department}
-                      departments={departments}
-                    />
-                  </Td>
-                  <Td>
-                    <span className="text-xs uppercase tracking-[0.1em] text-[#5A6B7A]">
-                      {u.role}
-                    </span>
-                  </Td>
-                  <Td>
-                    {u.department ? (
-                      <span
-                        className="font-mono"
-                        title={u.department}
-                      >
-                        {codeFor.get(u.department) ?? u.department}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </Td>
-                  <Td>
-                    <span
-                      className="text-xs"
-                      style={{
-                        color: u.status === "active" ? "#5A6B7A" : "#A8321F",
-                      }}
-                    >
-                      {u.status}
-                    </span>
-                  </Td>
-                  <Td>
-                    <UserActions
-                      userId={u.user_id}
-                      name={u.full_name}
-                      isStudent={u.role === "student"}
-                    />
-                  </Td>
-                  <Td>
-                    <AccountControls
-                      userId={u.user_id}
-                      name={u.full_name}
-                      suspended={u.status === "suspended"}
-                      isSelf={u.user_id === me?.id}
-                    />
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="mt-4 text-xs text-[#5A6B7A]">
-            {users.length} {users.length === 1 ? "account" : "accounts"}
-          </p>
-        </div>
-      )}
+      <div className="mt-6">
+        <DataTable
+          empty="No accounts match those filters."
+          caption={`${users.length} ${users.length === 1 ? "account" : "accounts"}`}
+          columns={[
+            { head: "Name" },
+            { head: "ID number" },
+            { head: "Role" },
+            { head: "Department" },
+            { head: "Status" },
+            { head: "Password" },
+            { head: "Account" },
+          ]}
+          rows={users.map((u) => ({
+            key: u.user_id,
+            cells: [
+              <div key="name">
+                <Link
+                  href={`/admin/users/${u.user_id}`}
+                  className="underline underline-offset-4 hover:text-[#0B6E5F]"
+                >
+                  {u.full_name}
+                </Link>
+                {u.email && (
+                  <span className="block text-xs font-normal text-[#5A6B7A] break-all">
+                    {u.email}
+                  </span>
+                )}
+              </div>,
+
+              <IdEditor
+                key="id"
+                userId={u.user_id}
+                role={u.role}
+                identifier={u.identifier}
+                department={u.department}
+                departments={departments}
+              />,
+
+              <span
+                key="role"
+                className="text-xs uppercase tracking-[0.1em] text-[#5A6B7A]"
+              >
+                {u.role}
+              </span>,
+
+              u.department ? (
+                <span key="dept" className="font-mono" title={u.department}>
+                  {codeFor.get(u.department) ?? u.department}
+                </span>
+              ) : (
+                <span key="dept" className="text-[#B4BFC8]">—</span>
+              ),
+
+              <span
+                key="status"
+                className="text-xs"
+                style={{
+                  color: u.status === "active" ? "#5A6B7A" : "#A8321F",
+                }}
+              >
+                {u.status}
+              </span>,
+
+              <UserActions
+                key="pw"
+                userId={u.user_id}
+                name={u.full_name}
+                isStudent={u.role === "student"}
+              />,
+
+              <AccountControls
+                key="acct"
+                userId={u.user_id}
+                name={u.full_name}
+                suspended={u.status === "suspended"}
+                isSelf={u.user_id === me?.id}
+              />,
+            ],
+          }))}
+        />
+      </div>
     </>
   );
 }
