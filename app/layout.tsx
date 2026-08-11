@@ -25,8 +25,6 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  // Keeps the scan screen clear of the notch and the home indicator.
-  viewportFit: "cover",
   themeColor: "#16202B",
 };
 
@@ -35,6 +33,12 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      {/*
+        `viewport-fit: cover` was removed. It let content sit under the notch
+        and the status bar, which is right for a full-bleed camera view and
+        wrong for every page with a header — the account name was rendering
+        behind the clock.
+      */}
       <body className="antialiased">
         {children}
         <Pwa />

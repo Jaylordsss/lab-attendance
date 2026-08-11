@@ -22,18 +22,23 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-dvh bg-[#FBFAF7] text-[#16202B]">
+      {/*
+        Two rows, and the name is not squeezed against Sign out. On a phone
+        the single-row version wrapped the name under the status bar and split
+        "Sign out" across lines.
+      */}
       <div className="border-b border-[#D8DFE5] bg-white">
-        <div className="mx-auto max-w-6xl px-6 py-4 flex items-baseline justify-between gap-4">
-          <div>
+        <div className="mx-auto max-w-6xl px-6 pt-4 pb-3 flex items-start justify-between gap-4">
+          <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
               General Science Laboratory
             </p>
-            <p className="text-sm font-medium">{user.fullName}</p>
+            <p className="text-sm font-medium truncate">{user.fullName}</p>
           </div>
-          <form action={signOut}>
+          <form action={signOut} className="shrink-0">
             <button
               type="submit"
-              className="text-sm text-[#5A6B7A] underline underline-offset-4 hover:text-[#0B6E5F]"
+              className="text-sm text-[#5A6B7A] underline underline-offset-4 whitespace-nowrap hover:text-[#0B6E5F]"
             >
               Sign out
             </button>
