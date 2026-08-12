@@ -5,6 +5,7 @@ import NavTabs from "@/components/nav-tabs";
 const NAV = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/attendance", label: "Attendance" },
+  { href: "/admin/at-risk", label: "To watch" },
   { href: "/admin/rooms", label: "Laboratories" },
   { href: "/admin/departments", label: "Departments" },
   { href: "/admin/teachers", label: "Teachers" },
@@ -22,11 +23,6 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-dvh bg-[#FBFAF7] text-[#16202B]">
-      {/*
-        Two rows, and the name is not squeezed against Sign out. On a phone
-        the single-row version wrapped the name under the status bar and split
-        "Sign out" across lines.
-      */}
       <div className="border-b border-[#D8DFE5] bg-white">
         <div className="mx-auto max-w-6xl px-6 pt-4 pb-3 flex items-start justify-between gap-4">
           <div className="min-w-0">
