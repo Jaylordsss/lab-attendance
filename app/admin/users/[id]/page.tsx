@@ -106,16 +106,39 @@ export default async function AccountPage({
 async function TeacherView({ userId }: { userId: string }) {
   const supabase = await createClient();
 
-  const [statsRes, sectionsRes] = await Promise.all([
+  const [statsRes, sectionsRes, recordRes] = await Promise.all([
     supabase.rpc("teacher_analytics", { p_user_id: userId }),
     supabase.rpc("teacher_sections_summary", { p_user_id: userId }),
+    supabase.rpc("staff_record", { p_user_id: userId }),
   ]);
 
   const stats = ((statsRes.data ?? []) as TeacherStats[])[0];
   const sections = (sectionsRes.data ?? []) as SectionRow[];
+  const record = ((recordRes.data ?? []) as any[])[0];
+
+  const contact = record && (
+    <Card>
+      <h2 className="text-sm font-medium mb-4">Contact</h2>
+      <dl className="space-y-4 text-sm">
+        <Field label="Faculty ID" value={record.faculty_id ?? "—"} mono />
+        <Field label="Department" value={record.department ?? "—"} />
+        <Field label="Email" value={record.email ?? "—"} mail={record.email} />
+        <Field
+          label="Mobile"
+          value={record.contact_no ? formatPhPhone(record.contact_no) : "—"}
+          tel={record.contact_no || undefined}
+        />
+      </dl>
+    </Card>
+  );
 
   if (!stats || Number(stats.sections_taught) === 0) {
-    return <Empty>This teacher has no sections yet.</Empty>;
+    return (
+      <div className="space-y-8">
+        <Empty>This teacher has no sections yet.</Empty>
+        {contact}
+      </div>
+    );
   }
 
   const punctual = Number(stats.classes_held) - Number(stats.opened_late);
@@ -164,6 +187,8 @@ async function TeacherView({ userId }: { userId: string }) {
           )}
         </div>
       )}
+
+      {contact}
 
       <section>
         <h2 className="text-sm font-medium mb-3">Their sections</h2>
@@ -285,8 +310,13 @@ async function StudentView({
 
       {record && (
         <Card>
-          <h2 className="text-sm font-medium mb-4">Guardian and address</h2>
+          <h2 className="text-sm font-medium mb-4">Contact and guardian</h2>
           <dl className="space-y-4 text-sm">
+            <Field
+              label="Student mobile"
+              value={record.contact_no ? formatPhPhone(record.contact_no) : "—"}
+              tel={record.contact_no || undefined}
+            />
             <Field label="Guardian" value={record.guardian_name || "—"} />
             <Field
               label="Guardian mobile"
@@ -296,11 +326,6 @@ async function StudentView({
                   : "—"
               }
               tel={record.guardian_phone || undefined}
-            />
-            <Field
-              label="Student mobile"
-              value={record.contact_no ? formatPhPhone(record.contact_no) : "—"}
-              tel={record.contact_no || undefined}
             />
             <Field label="Address" value={record.address || "—"} />
           </dl>
@@ -374,15 +399,26 @@ function Table({
   );
 }
 
+/**
+ * A labelled value. Numbers and addresses become links, so a phone dials or
+ * composes rather than making someone copy digits by hand — which is the
+ * whole reason these are on screen during an emergency.
+ */
 function Field({
   label,
   value,
   tel,
+  mail,
+  mono,
 }: {
   label: string;
   value: string;
   tel?: string;
+  mail?: string | null;
+  mono?: boolean;
 }) {
+  const className = `underline underline-offset-4 break-all ${mono !== false ? "font-mono" : ""}`;
+
   return (
     <div>
       <dt className="text-[11px] uppercase tracking-[0.14em] text-[#5A6B7A]">
@@ -390,9 +426,15 @@ function Field({
       </dt>
       <dd className="mt-1">
         {tel ? (
-          <a href={`tel:${tel}`} className="font-mono underline underline-offset-4">
+          <a href={`tel:${tel}`} className={className}>
             {value}
           </a>
+        ) : mail ? (
+          <a href={`mailto:${mail}`} className="underline underline-offset-4 break-all">
+            {value}
+          </a>
+        ) : mono ? (
+          <span className="font-mono">{value}</span>
         ) : (
           value
         )}
