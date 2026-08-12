@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/require-admin";
 import { createClient } from "@/lib/supabase/server";
-import { getServiceClient } from "@/lib/supabase/admin";
 import { piiKey } from "@/lib/require-teacher";
 import { formatPhPhone } from "@/lib/auth";
 import { PageHeader, Card, Empty, Th, Td } from "@/components/admin-ui";
@@ -230,13 +229,29 @@ async function StudentView({
   userId: string;
   name: string;
 }) {
+  // Both calls run as the signed-in administrator. These functions check
+  // is_admin(), which reads auth.uid() — and the service role has no user
+  // identity, so the check would fail and the card would render empty with no
+  // indication that anything had gone wrong.
   const supabase = await createClient();
-  const service = getServiceClient();
 
   const [summaryRes, recordRes] = await Promise.all([
     supabase.rpc("student_attendance_summary", { p_user_id: userId }),
-    service.rpc("student_record", { p_user_id: userId, p_key: piiKey() }),
+    supabase.rpc("student_details_for_admin", {
+      p_user_id: userId,
+      p_key: piiKey(),
+    }),
   ]);
+
+  if (summaryRes.error) {
+    console.error("student_attendance_summary:", summaryRes.error.message);
+  }
+  if (recordRes.error) {
+    console.error("student_details_for_admin:", recordRes.error.message);
+  }
+
+  // Recorded separately so the read above can stay a stable function.
+  await supabase.rpc("log_student_record_view", { p_user_id: userId });
 
   const summary = (summaryRes.data ?? []) as StudentRow[];
   const record = ((recordRes.data ?? []) as any[])[0];
@@ -308,30 +323,85 @@ async function StudentView({
         )}
       </section>
 
-      {record && (
+      {record ? (
+        <div className="grid gap-6 sm:grid-cols-2 sm:items-start">
+          <Card>
+            <h2 className="text-sm font-medium mb-4">Student</h2>
+            <dl className="space-y-4 text-sm">
+              <Field label="Student number" value={record.student_no} mono />
+              <Field
+                label="Birthday"
+                value={new Date(record.birthdate).toLocaleDateString("en-PH", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              />
+              <Field label="Department" value={record.department || "—"} />
+              <Field
+                label="Mobile"
+                value={
+                  record.contact_no ? formatPhPhone(record.contact_no) : "—"
+                }
+                tel={record.contact_no || undefined}
+              />
+              <Field label="Address" value={record.address || "—"} mono={false} />
+            </dl>
+          </Card>
+
+          <Card>
+            <h2 className="text-sm font-medium mb-4">Guardian</h2>
+            <dl className="space-y-4 text-sm">
+              <Field
+                label="Name"
+                value={record.guardian_name || "—"}
+                mono={false}
+              />
+              <Field
+                label="Mobile"
+                value={
+                  record.guardian_phone
+                    ? formatPhPhone(record.guardian_phone)
+                    : "—"
+                }
+                tel={record.guardian_phone || undefined}
+              />
+            </dl>
+
+            <div className="mt-6 pt-5 border-t border-[#E2E8ED] space-y-4 text-sm">
+              <Field
+                label="Profile"
+                value={record.profile_complete ? "Complete" : "Incomplete"}
+                mono={false}
+              />
+              <Field
+                label="Phone registered"
+                value={
+                  record.device_bound_at
+                    ? new Date(record.device_bound_at).toLocaleDateString(
+                        "en-PH",
+                        { day: "numeric", month: "short", year: "numeric" },
+                      )
+                    : "Not yet"
+                }
+                mono={false}
+              />
+            </div>
+
+            <p className="mt-5 text-xs text-[#5A6B7A] leading-relaxed">
+              Personal data of a minor under RA 10173. Opening this page is
+              recorded in the audit log.
+            </p>
+          </Card>
+        </div>
+      ) : (
         <Card>
-          <h2 className="text-sm font-medium mb-4">Contact and guardian</h2>
-          <dl className="space-y-4 text-sm">
-            <Field
-              label="Student mobile"
-              value={record.contact_no ? formatPhPhone(record.contact_no) : "—"}
-              tel={record.contact_no || undefined}
-            />
-            <Field label="Guardian" value={record.guardian_name || "—"} />
-            <Field
-              label="Guardian mobile"
-              value={
-                record.guardian_phone
-                  ? formatPhPhone(record.guardian_phone)
-                  : "—"
-              }
-              tel={record.guardian_phone || undefined}
-            />
-            <Field label="Address" value={record.address || "—"} />
-          </dl>
-          <p className="mt-5 text-xs text-[#5A6B7A] leading-relaxed">
-            Personal data of a minor under RA 10173. Opening this page is
-            recorded in the audit log.
+          <p className="text-sm text-[#A8321F]">
+            Couldn&rsquo;t read this student&rsquo;s details.
+          </p>
+          <p className="mt-2 text-sm text-[#5A6B7A] leading-relaxed">
+            Check that PII_KEY is set on the server and that migration 028 has
+            been run.
           </p>
         </Card>
       )}
