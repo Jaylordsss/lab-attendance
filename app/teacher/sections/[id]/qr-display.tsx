@@ -24,7 +24,7 @@ export default function QrDisplay({
     return (
       <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-8">
         <p className="text-[11px] uppercase tracking-[0.2em] text-[#5A6B7A]">
-          College of Information Technology and Engineering
+          INTERNATIONAL SCHOOL OF ASIA AND THE PACIFIC
         </p>
         <p className="mt-2 font-mono text-4xl tracking-[0.08em]">{roomCode}</p>
         <p className="text-lg">{roomName}</p>

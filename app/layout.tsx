@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     default: "Lab Attendance",
     template: "%s · Lab Attendance",
   },
-  description: "College of Information Technology and Engineering attendance system",
+  description: "INTERNATIONAL SCHOOL OF ASIA AND THE PACIFIC attendance system",
   applicationName: "Lab Attendance",
   appleWebApp: {
     capable: true,
