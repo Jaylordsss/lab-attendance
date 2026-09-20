@@ -9,7 +9,7 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "General Science Laboratory Attendance",
+    name: "College of Information Technology and Engineering Attendance",
     short_name: "Lab Attendance",
     description:
       "Scan the laboratory code to record your attendance.",

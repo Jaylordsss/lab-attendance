@@ -25,7 +25,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm">
         <header className="mb-8">
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
-            General Science Laboratory
+            College of Information Technology and Engineering
           </p>
           <h1 className="mt-1 text-2xl font-medium leading-tight">Attendance</h1>
         </header>

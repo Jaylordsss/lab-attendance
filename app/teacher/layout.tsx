@@ -17,7 +17,7 @@ export default async function TeacherLayout({
       <div className="border-b border-[#D8DFE5] bg-white">
         <div className="mx-auto max-w-4xl px-6 pt-4 pb-3">
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
-            General Science Laboratory
+            College of Information Technology and Engineering
           </p>
           <p className="text-sm font-medium">{user.fullName}</p>
         </div>

@@ -79,7 +79,7 @@ export default async function RoomPage({
           {/* The printable sheet. */}
           <div className="bg-white border border-[#D8DFE5] rounded-lg p-10 text-center print:border-0 print:p-0">
             <p className="text-[11px] uppercase tracking-[0.2em] text-[#5A6B7A]">
-              General Science Laboratory
+              College of Information Technology and Engineering
             </p>
             <p className="mt-2 font-mono text-5xl tracking-[0.08em]">
               {room.code}

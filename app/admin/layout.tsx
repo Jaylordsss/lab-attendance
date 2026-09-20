@@ -27,7 +27,7 @@ export default async function AdminLayout({
         <div className="mx-auto max-w-6xl px-6 pt-4 pb-3 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-[0.18em] text-[#5A6B7A]">
-              General Science Laboratory
+              College of Information Technology and Engineering
             </p>
             <p className="text-sm font-medium truncate">{user.fullName}</p>
           </div>
