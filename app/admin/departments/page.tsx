@@ -38,33 +38,21 @@ export default async function DepartmentsPage() {
               No departments yet. Add one before creating teacher accounts.
             </Empty>
           ) : (
-            <div className="bg-white border border-[#D8DFE5] rounded-lg p-6 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#E2E8ED]">
-                    <Th>Short name</Th>
-                    <Th>Department</Th>
-                    <Th>Faculty</Th>
-                    <Th>Students</Th>
-                    <Th>{""}</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {departments.map((d) => (
-                    <tr key={d.id} className="border-b border-[#F0F3F5]">
-                      <Td>
-                        <span className="font-mono">{d.code}</span>
-                      </Td>
-                      <Td>
-                        <RenameCell id={d.id} name={d.name} code={d.code} />
-                      </Td>
-                      <Td>
-                        <span className="font-mono">{d.faculty_count}</span>
-                      </Td>
-                      <Td>
-                        <span className="font-mono">{d.student_count}</span>
-                      </Td>
-                      <Td>
+            <div className="bg-white border border-[#D8DFE5] rounded-lg divide-y divide-[#F0F3F5]">
+              {/* Mobile cards */}
+              <ul className="md:hidden divide-y divide-[#F0F3F5]">
+                {departments.map((d) => (
+                  <li key={d.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="font-mono text-xs text-[#5A6B7A] bg-[#F0F3F5] px-1.5 py-0.5 rounded">
+                          {d.code}
+                        </span>
+                        <p className="mt-1 text-sm font-medium leading-snug break-words">
+                          {d.name}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
                         {Number(d.faculty_count) === 0 &&
                         Number(d.student_count) === 0 ? (
                           <ConfirmDelete
@@ -76,11 +64,62 @@ export default async function DepartmentsPage() {
                         ) : (
                           <span className="text-xs text-[#B4BFC8]">In use</span>
                         )}
-                      </Td>
+                      </div>
+                    </div>
+                    <div className="flex gap-4 text-xs text-[#5A6B7A]">
+                      <span><span className="font-mono font-medium text-[#16202B]">{d.faculty_count}</span> faculty</span>
+                      <span><span className="font-mono font-medium text-[#16202B]">{d.student_count}</span> students</span>
+                    </div>
+                    <RenameCell id={d.id} name={d.name} code={d.code} />
+                  </li>
+                ))}
+              </ul>
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#E2E8ED]">
+                      <Th>Short name</Th>
+                      <Th>Department</Th>
+                      <Th>Faculty</Th>
+                      <Th>Students</Th>
+                      <Th>{""}</Th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {departments.map((d) => (
+                      <tr key={d.id} className="border-b border-[#F0F3F5]">
+                        <Td>
+                          <span className="font-mono">{d.code}</span>
+                        </Td>
+                        <Td>
+                          <RenameCell id={d.id} name={d.name} code={d.code} />
+                        </Td>
+                        <Td>
+                          <span className="font-mono">{d.faculty_count}</span>
+                        </Td>
+                        <Td>
+                          <span className="font-mono">{d.student_count}</span>
+                        </Td>
+                        <Td>
+                          {Number(d.faculty_count) === 0 &&
+                          Number(d.student_count) === 0 ? (
+                            <ConfirmDelete
+                              action={deleteDepartment}
+                              hidden={{ id: d.id, name: d.name }}
+                              question={`Delete ${d.name}?`}
+                              note="It disappears from every department dropdown."
+                            />
+                          ) : (
+                            <span className="text-xs text-[#B4BFC8]">In use</span>
+                          )}
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>
