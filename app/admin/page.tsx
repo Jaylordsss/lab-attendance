@@ -42,6 +42,7 @@ const ALERT_LINK: Record<string, string> = {
   very_late: "/admin/attendance?status=late",
   not_started: "/admin/sections",
   left_open: "/admin/sections",
+  late_open: "/admin/sections",
 };
 
 export default async function AdminHome() {
@@ -170,8 +171,8 @@ export default async function AdminHome() {
         <p className="mt-4 text-xs text-[#5A6B7A] leading-relaxed">
           Today only — the list starts fresh each morning. Covers scans from
           outside a laboratory, accounts used on another phone, arrivals more
-          than 45 minutes late, classes never opened, and classes left open
-          after they ended.
+          than 45 minutes late, classes never opened, classes opened 15+ minutes
+          late, and classes left open after they ended.
         </p>
       </section>
     </>
