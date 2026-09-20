@@ -12,7 +12,7 @@ import SessionPanel from "./session-panel";
 import Link from "next/link";
 import MarkRow, { type RosterEntry } from "./mark-row";
 import ClearRoster from "./clear-roster";
-import { removeStudent } from "./actions";
+import RemoveStudentButton from "./remove-student-button";
 
 export const dynamic = "force-dynamic";
 
@@ -241,20 +241,11 @@ export default async function SectionPage({
                         </span>
                       </Td>
                       <Td>
-                        <form action={removeStudent}>
-                          <input type="hidden" name="sectionId" value={id} />
-                          <input
-                            type="hidden"
-                            name="studentId"
-                            value={student.user_id}
-                          />
-                          <button
-                            type="submit"
-                            className="text-xs text-[#5A6B7A] underline underline-offset-4 hover:text-[#A8321F]"
-                          >
-                            Remove
-                          </button>
-                        </form>
+                        <RemoveStudentButton
+                          sectionId={id}
+                          studentId={student.user_id}
+                          studentName={student.full_name}
+                        />
                       </Td>
                     </tr>
                   ))}
